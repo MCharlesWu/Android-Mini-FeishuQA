@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.feishuqa.app.login.LoginViewModel
 import com.example.feishuqa.common.utils.JsonUtils
 import com.example.feishuqa.common.utils.theme.FeishuQATheme
 
@@ -18,9 +19,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // 在这里测试工具类
-        val jsonString = JsonUtils.readJson(this, "user.json")
-        android.util.Log.d("JsonTest", "json content = $jsonString")
+        // 测试简单的登录验证
+        val viewModel = LoginViewModel()
+
+        viewModel.loginMessage.observe(this) { msg ->
+            android.util.Log.d("LoginTest", "登录结果 = $msg")
+        }
+
+        // 测试一下
+        viewModel.login(this, "alice", "123456")
         setContent {
             FeishuQATheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
