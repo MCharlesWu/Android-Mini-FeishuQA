@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="8dp">
+
+    <ImageView
+        android:id="@+id/ivAvatar"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:src="@android:drawable/sym_def_app_icon"
+        android:background="#3370FF"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- 文本消息容器 -->
+    <LinearLayout
+        android:id="@+id/markdownContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/bg_bubble_user"
+        android:maxWidth="280dp"
+        android:minWidth="40dp"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:visibility="visible"
+        app:layout_constraintEnd_toStartOf="@+id/ivAvatar"
+        app:layout_constraintTop_toTopOf="parent" />
+        
+    <!-- 图片消息容器 (新增) -->
+    <ImageView
+        android:id="@+id/ivImageContent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:maxWidth="200dp"
+        android:maxHeight="200dp"
+        android:adjustViewBounds="true"
+        android:scaleType="centerCrop"
+        android:background="@drawable/bg_rounded_gray"
+        android:visibility="gone"
+        app:layout_constraintEnd_toStartOf="@+id/ivAvatar"
+        app:layout_constraintTop_toTopOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
