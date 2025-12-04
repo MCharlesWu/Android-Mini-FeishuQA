@@ -1,44 +1,29 @@
-package com.example.feishuqa.app.history
+package com.example.feishuqa.data.repository
 
 import android.content.Context
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.feishuqa.common.utils.JsonUtils
+import com.example.feishuqa.data.entity.AIModel
+import com.example.feishuqa.data.entity.AIModels
 import com.example.feishuqa.data.entity.Conversation
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /**
- * 历史对话 ViewModel
- * 不使用索引文件，通过遍历目录加载所有对话文件
+ * 主界面数据仓库
+ * Model层：负责主界面相关数据的获取和处理
  */
-class HistoryViewModel(private val context: Context) : ViewModel() {
-
-    private val _uiState = MutableStateFlow(HistoryUiState())
-    val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
-
-    init {
-        loadConversations()
-    }
+class MainRepository(private val context: Context) {
 
     /**
-     * 从所有对话文件中加载对话列表
-     * 遍历目录，读取每个文件，提取信息
+     * 获取历史对话列表
      */
-    fun loadConversations() {
-        viewModelScope.launch {
-            val currentState = _uiState.value
-            _uiState.value = currentState.copy(isLoading = true, error = null)
-            
+    suspend fun getConversations(): List<Conversation> {
+        return withContext(Dispatchers.IO) {
             try {
-                // 1. 获取所有对话文件名
                 val fileNames = JsonUtils.getAllConversationFiles(context)
-                
-                // 2. 读取每个文件，提取信息
                 val conversations = mutableListOf<Conversation>()
+                
                 fileNames.forEach { fileName ->
                     try {
                         val conversation = loadConversationFromFile(fileName)
@@ -47,50 +32,36 @@ class HistoryViewModel(private val context: Context) : ViewModel() {
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
-                        // 单个文件读取失败，继续处理其他文件
                     }
                 }
                 
-                _uiState.value = currentState.copy(
-                    conversations = conversations,
-                    isLoading = false
-                )
+                conversations.sortedByDescending { it.lastMessageTime }
             } catch (e: Exception) {
-                _uiState.value = currentState.copy(
-                    isLoading = false,
-                    error = e.message ?: "加载失败"
-                )
+                emptyList()
             }
         }
     }
 
     /**
-     * 从单个对话文件中加载对话信息
+     * 从文件加载对话
      */
     private fun loadConversationFromFile(fileName: String): Conversation? {
         return try {
-            // 1. 读取文件内容
             val content = JsonUtils.readJsonFromFiles(context, fileName)
             if (content.isBlank() || content == "[]") {
                 return null
             }
 
-            // 2. 解析 JSON
             val json = JSONObject(content)
-            
-            // 3. 从文件名提取 ID
             val id = JsonUtils.extractIdFromFileName(fileName)
-            
-            // 4. 提取标题
             val title = json.optString("title", "新对话")
             
-            // 5. 提取最后一条消息
-            val lastMessage: String? = if (json.has("messages") && !json.isNull("messages")) {
+            val lastMessage = if (json.has("messages") && !json.isNull("messages")) {
                 val messagesArray = json.getJSONArray("messages")
                 if (messagesArray.length() > 0) {
                     val lastMsg = messagesArray.getJSONObject(messagesArray.length() - 1)
-                    val content = lastMsg.optString("content", "")
-                    if (content.isNotEmpty()) content else null
+                    val contentMsg = lastMsg.optString("content", "")
+                    if (contentMsg.isNotEmpty()) contentMsg else null
                 } else {
                     null
                 }
@@ -98,22 +69,17 @@ class HistoryViewModel(private val context: Context) : ViewModel() {
                 null
             }
             
-            // 6. 提取时间信息
             val updatedTime = json.optLong("updatedTime", System.currentTimeMillis())
             val createdTime = json.optLong("createdTime", updatedTime)
-            
-            // 7. 统计消息数量
             val messageCount = if (json.has("messages") && !json.isNull("messages")) {
                 json.getJSONArray("messages").length()
             } else {
                 0
             }
             
-            // 8. 提取其他信息
             val isPinned = json.optBoolean("isPinned", false)
             val userId = if (json.has("userId")) json.getInt("userId") else null
             
-            // 9. 创建 Conversation 对象
             Conversation(
                 id = id,
                 title = title,
@@ -126,24 +92,54 @@ class HistoryViewModel(private val context: Context) : ViewModel() {
                 userId = userId
             )
         } catch (e: Exception) {
-            e.printStackTrace()
             null
         }
     }
 
     /**
-     * 更新搜索关键词
+     * 创建新对话
      */
-    fun updateSearchQuery(query: String) {
-        val currentState = _uiState.value
-        _uiState.value = currentState.copy(searchQuery = query)
+    suspend fun createConversation(title: String): Result<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val conversationId = "conversation${System.currentTimeMillis()}"
+                val meta = JSONObject().apply {
+                    put("conversationId", conversationId)
+                    put("title", title)
+                    put("createTime", System.currentTimeMillis())
+                    put("updateTime", System.currentTimeMillis())
+                    put("isPinned", false)
+                    put("isDeleted", false)
+                }
+
+                val root = JSONObject().apply {
+                    put("conversationMeta", meta)
+                    put("messages", org.json.JSONArray())
+                }
+
+                val fileName = "$conversationId.json"
+                val file = java.io.File(context.filesDir, fileName)
+                file.writeText(root.toString())
+                
+                Result.success(conversationId)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
     }
 
     /**
-     * 选择对话
+     * 获取可用的AI模型列表
      */
-    fun selectConversation(conversationId: String) {
-        val currentState = _uiState.value
-        _uiState.value = currentState.copy(selectedConversationId = conversationId)
+    fun getAvailableModels(): List<AIModel> {
+        return AIModels.defaultModels
+    }
+
+    /**
+     * 获取默认模型
+     */
+    fun getDefaultModel(): AIModel {
+        return AIModels.defaultModel
     }
 }
+

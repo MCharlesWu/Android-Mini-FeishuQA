@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- 主题继承自Material Design -->
+    <style name="Theme.FeishuQA" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <!-- 主色调 -->
+        <item name="colorPrimary">@color/feishu_blue</item>
+        <item name="colorPrimaryDark">@color/feishu_blue_dark</item>
+        <item name="colorAccent">@color/feishu_blue</item>
 
-    <style name="Theme.FeishuQA" parent="android:Theme.Material.Light.NoActionBar" />
+        <!-- 状态栏 -->
+        <item name="android:statusBarColor">@color/white</item>
+        <item name="android:windowLightStatusBar">true</item>
+
+        <!-- 背景色 -->
+        <item name="android:windowBackground">@color/white</item>
+    </style>
 </resources>

@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,7 +24,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.feishuqa.data.entity.Conversation
 import java.text.SimpleDateFormat
 import java.util.*
@@ -34,9 +34,11 @@ import java.util.*
 @Composable
 fun HistoryView(
     onConversationClick: (String) -> Unit,
-    viewModel: HistoryViewModel = viewModel { HistoryViewModel(LocalContext.current) }
+    viewModel: HistoryViewModel? = null
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val actualViewModel = viewModel ?: remember { HistoryViewModel(context) }
+    val uiState by actualViewModel.uiState.collectAsState()
     val filteredConversations = uiState.getFilteredConversations()
 
     Column(
@@ -50,7 +52,7 @@ fun HistoryView(
         // 搜索框
         HistorySearchBar(
             searchQuery = uiState.searchQuery,
-            onSearchQueryChange = { viewModel.updateSearchQuery(it) }
+            onSearchQueryChange = { actualViewModel.updateSearchQuery(it) }
         )
 
         // 加载状态
@@ -77,7 +79,7 @@ fun HistoryView(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = uiState.error,
+                        text = uiState.error ?: "",
                         fontSize = 12.sp,
                         color = Color.Gray
                     )
@@ -100,7 +102,7 @@ fun HistoryView(
                         conversation = conversation,
                         isSelected = conversation.id == uiState.selectedConversationId,
                         onClick = {
-                            viewModel.selectConversation(conversation.id)
+                            actualViewModel.selectConversation(conversation.id)
                             onConversationClick(conversation.id)
                         }
                     )
@@ -174,7 +176,7 @@ fun HistorySearchBar(
  */
 @Composable
 fun ConversationItem(
-    conversation: com.example.feishuqa.data.entity.Conversation,
+    conversation: Conversation,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {

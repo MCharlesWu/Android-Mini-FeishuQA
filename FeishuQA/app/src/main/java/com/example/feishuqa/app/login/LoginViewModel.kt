@@ -1,50 +1,103 @@
 package com.example.feishuqa.app.login
 
 import android.content.Context
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.feishuqa.data.entity.User
+import com.example.feishuqa.data.repository.AuthRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
- * ViewModel 层：
- * - 获取用户输入
- * - 校验用户名密码
- * - 将结果通过 LiveData 通知 UI
+ * 登录界面ViewModel
+ * ViewModel层：处理登录业务逻辑
  */
-class LoginViewModel : ViewModel()
-{
+class LoginViewModel(private val context: Context) : ViewModel() {
 
-    private val loginModel = LoginModel()
+    private val repository = AuthRepository(context)
 
-    // LiveData：通知 UI 登录结果
-    private val _loginMessage = MutableLiveData<String>()
-    val loginMessage: LiveData<String> get() = _loginMessage
+    // UI状态
+    private val _uiState = MutableStateFlow(LoginUiState())
+    val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
+
+    // 登录成功事件
+    private val _loginSuccess = MutableStateFlow<User?>(null)
+    val loginSuccess: StateFlow<User?> = _loginSuccess.asStateFlow()
 
     /**
-     * 登录逻辑：校验用户名密码（放在 ViewModel 中）
+     * 更新用户名
      */
-    fun login(context: Context, username: String, password: String)
-    {
+    fun updateUsername(username: String) {
+        _uiState.value = _uiState.value.copy(username = username)
+    }
 
-        // 简单空判断（UI 层方便处理）
-        if (username.isEmpty() || password.isEmpty()) {
-            _loginMessage.value = "用户名或密码不能为空"
+    /**
+     * 更新密码
+     */
+    fun updatePassword(password: String) {
+        _uiState.value = _uiState.value.copy(password = password)
+    }
+
+    /**
+     * 切换密码可见性
+     */
+    fun togglePasswordVisibility() {
+        _uiState.value = _uiState.value.copy(isPasswordVisible = !_uiState.value.isPasswordVisible)
+    }
+
+    /**
+     * 执行登录
+     */
+    fun login() {
+        val currentState = _uiState.value
+        if (currentState.username.isBlank()) {
+            _uiState.value = currentState.copy(error = "请输入用户名")
+            return
+        }
+        if (currentState.password.isBlank()) {
+            _uiState.value = currentState.copy(error = "请输入密码")
             return
         }
 
-        // Model 读取 user.json
-        val userList = loginModel.loadUsers(context)
-
-        // 校验用户名密码（核心逻辑）
-        val success = userList.any { user ->
-            user.name == username && user.password == password
-        }
-
-        // 根据结果更新 UI
-        _loginMessage.value = if (success) {
-            "登录成功"
-        } else {
-            "用户名或密码错误"
+        viewModelScope.launch {
+            _uiState.value = currentState.copy(isLoading = true, error = null)
+            val result = repository.login(currentState.username, currentState.password)
+            result.onSuccess { user ->
+                _uiState.value = currentState.copy(isLoading = false)
+                _loginSuccess.value = user
+            }.onFailure { exception ->
+                _uiState.value = currentState.copy(
+                    isLoading = false,
+                    error = exception.message ?: "登录失败"
+                )
+            }
         }
     }
+
+    /**
+     * 清除登录成功事件
+     */
+    fun clearLoginSuccess() {
+        _loginSuccess.value = null
+    }
+
+    /**
+     * 清除错误
+     */
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(error = null)
+    }
 }
+
+/**
+ * 登录界面UI状态
+ */
+data class LoginUiState(
+    val username: String = "",
+    val password: String = "",
+    val isPasswordVisible: Boolean = false,
+    val isLoading: Boolean = false,
+    val error: String? = null
+)

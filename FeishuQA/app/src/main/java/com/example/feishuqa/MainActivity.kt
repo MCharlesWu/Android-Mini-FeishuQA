@@ -1,56 +1,51 @@
 package com.example.feishuqa
 
 import android.os.Bundle
-import android.util.Log
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.ui.Modifier
-import com.example.feishuqa.app.chat.ChatScreen
-import com.example.feishuqa.app.main.MainScreenView
-import com.example.feishuqa.common.utils.JsonUtils
-import com.example.feishuqa.common.utils.theme.FeishuQATheme
-import org.json.JSONObject
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.GravityCompat
+import androidx.lifecycle.ViewModelProvider
+import com.example.feishuqa.app.main.MainView
+import com.example.feishuqa.app.main.MainViewModel
+import com.example.feishuqa.app.main.MainViewModelFactory
+import com.example.feishuqa.databinding.ActivityMainBinding
 
-class MainActivity : ComponentActivity() {
+/**
+ * 主界面Activity
+ * Activity层：只负责初始化和绑定View、ViewModel
+ */
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var viewModel: MainViewModel
+    private lateinit var mainView: MainView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        val fileName = "conversation.json"
 
-        // 创建一个新的 conversation JSON 对象
-        val newConversation = JSONObject().apply {
-            put("conversationId", 2)
-            put("title", "第二个话题")
-            put("userId", 1001)
-            put("createdTime", System.currentTimeMillis())
-            put("updatedTime", System.currentTimeMillis())
-            put("messages", org.json.JSONArray()) // 空消息数组
-        }
+        // 初始化ViewBinding
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        // 调用 appendJsonObject 写入内部存储
-        val success = JsonUtils.overwriteJsonObject(this, fileName, newConversation)
-        Log.d("JsonTest", "写入结果: $success")
+        // 创建ViewModel
+        viewModel = ViewModelProvider(this, MainViewModelFactory(this))[MainViewModel::class.java]
 
-        // 读取文件内容
-        val content = JsonUtils.readJsonFromFiles(this, fileName)
-        Log.d("JsonTest", "文件内容: $content")
-        setContent {
-            FeishuQATheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    // 直接展示聊天界面
-                    ChatScreen(
-                        onBackClick = { finish() }
-                    )
-                    //MainScreenView()
-                }
-            }
+        // 创建View并初始化
+        val drawerBinding = com.example.feishuqa.databinding.LayoutDrawerBinding.bind(binding.navDrawer.root)
+        val inputBarBinding = com.example.feishuqa.databinding.LayoutInputBarBinding.bind(binding.inputBar.root)
+        
+        mainView = MainView(this, binding, drawerBinding, inputBarBinding, viewModel, this)
+        mainView.init()
+    }
+
+    /**
+     * 处理返回键
+     */
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            binding.drawerLayout.closeDrawer(GravityCompat.START)
+        } else {
+            super.onBackPressed()
         }
     }
 }

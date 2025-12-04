@@ -38,6 +38,7 @@ android {
     }
     buildFeatures {
         compose = true
+        viewBinding = true
     }
 }
 
@@ -56,6 +57,12 @@ dependencies {
     // XML 布局相关依赖
     implementation(libs.androidx.recyclerview)
     implementation(libs.androidx.fragment)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.drawerlayout)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.material)
+    // Compose ConstraintLayout
+    implementation(libs.androidx.constraintlayout.compose)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
