@@ -7,4 +7,8 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    
+    <!-- 联网搜索按钮颜色 -->
+    <color name="web_search_normal">#333333</color>
+    <color name="web_search_selected">#3B82F6</color>
 </resources>

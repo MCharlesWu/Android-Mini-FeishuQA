@@ -11,17 +11,31 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.FeishuQA">
+        
+        <!-- 主界面 -->
         <activity
-            android:name=".MainActivity"
+            android:name=".app.main.MainActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.FeishuQA">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <!-- 登录界面 -->
+        <activity
+            android:name=".app.login.LoginActivity"
+            android:exported="false"
+            android:theme="@style/Theme.FeishuQA"/>
+        
+        <!-- 注册界面 -->
+        <activity
+            android:name=".app.register.RegisterActivity"
+            android:exported="false"
+            android:theme="@style/Theme.FeishuQA"/>
+            
     </application>
 
 </manifest>

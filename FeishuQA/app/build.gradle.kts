@@ -38,8 +38,10 @@ android {
     }
     buildFeatures {
         compose = true
+        viewBinding = true
     }
 }
+
 
 dependencies {
     implementation(libs.androidx.core.ktx)
@@ -50,12 +52,13 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.androidx.compose.runtime.livedata)
-    // XML 布局相关依赖
+    
+    // XML布局相关依赖
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.recyclerview)
-    implementation(libs.androidx.fragment)
+    implementation(libs.androidx.drawerlayout)
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

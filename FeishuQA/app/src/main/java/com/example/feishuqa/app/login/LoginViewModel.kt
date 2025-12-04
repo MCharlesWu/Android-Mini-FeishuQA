@@ -1,50 +1,102 @@
 package com.example.feishuqa.app.login
 
-import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.example.feishuqa.data.repository.UserRepository
 
 /**
- * ViewModel 层：
- * - 获取用户输入
- * - 校验用户名密码
- * - 将结果通过 LiveData 通知 UI
+ * 登录界面ViewModel
  */
-class LoginViewModel : ViewModel()
-{
+class LoginViewModel(
+    private val userRepository: UserRepository
+) : ViewModel() {
 
-    private val loginModel = LoginModel()
+    // 用户名
+    private val _username = MutableLiveData<String>()
+    val username: LiveData<String> = _username
 
-    // LiveData：通知 UI 登录结果
-    private val _loginMessage = MutableLiveData<String>()
-    val loginMessage: LiveData<String> get() = _loginMessage
+    // 密码
+    private val _password = MutableLiveData<String>()
+    val password: LiveData<String> = _password
+
+    // 密码是否可见
+    private val _passwordVisible = MutableLiveData(false)
+    val passwordVisible: LiveData<Boolean> = _passwordVisible
+
+    // 登录状态
+    private val _loginResult = MutableLiveData<LoginResult>()
+    val loginResult: LiveData<LoginResult> = _loginResult
+
+    // 错误消息
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
 
     /**
-     * 登录逻辑：校验用户名密码（放在 ViewModel 中）
+     * 设置用户名
      */
-    fun login(context: Context, username: String, password: String)
-    {
+    fun setUsername(username: String) {
+        _username.value = username
+    }
 
-        // 简单空判断（UI 层方便处理）
-        if (username.isEmpty() || password.isEmpty()) {
-            _loginMessage.value = "用户名或密码不能为空"
+    /**
+     * 设置密码
+     */
+    fun setPassword(password: String) {
+        _password.value = password
+    }
+
+    /**
+     * 切换密码可见性
+     */
+    fun togglePasswordVisibility() {
+        _passwordVisible.value = !(_passwordVisible.value ?: false)
+    }
+
+    /**
+     * 执行登录
+     */
+    fun login() {
+        val username = _username.value?.trim() ?: ""
+        val password = _password.value?.trim() ?: ""
+
+        // 验证输入
+        if (username.isEmpty()) {
+            _errorMessage.value = "请输入用户名"
             return
         }
 
-        // Model 读取 user.json
-        val userList = loginModel.loadUsers(context)
-
-        // 校验用户名密码（核心逻辑）
-        val success = userList.any { user ->
-            user.name == username && user.password == password
+        if (password.isEmpty()) {
+            _errorMessage.value = "请输入密码"
+            return
         }
 
-        // 根据结果更新 UI
-        _loginMessage.value = if (success) {
-            "登录成功"
-        } else {
-            "用户名或密码错误"
-        }
+        // 执行登录（模拟）
+        performLogin(username, password)
+    }
+
+    private fun performLogin(username: String, password: String) {
+        // TODO: 实际项目中调用后端API验证
+        
+        // 模拟登录成功
+        userRepository.saveLoginState(username)
+        _loginResult.value = LoginResult.Success(username)
+    }
+
+    /**
+     * 清除错误消息
+     */
+    fun clearErrorMessage() {
+        _errorMessage.value = null
+    }
+
+    /**
+     * 登录结果
+     */
+    sealed class LoginResult {
+        data class Success(val username: String) : LoginResult()
+        data class Error(val message: String) : LoginResult()
     }
 }
+
+

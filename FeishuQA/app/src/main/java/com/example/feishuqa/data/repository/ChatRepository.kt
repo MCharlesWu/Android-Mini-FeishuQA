@@ -1,75 +1,47 @@
 package com.example.feishuqa.data.repository
 
-import com.example.feishuqa.data.entity.Message
-import com.example.feishuqa.data.entity.MessageStatus
-import com.example.feishuqa.data.entity.MessageType
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import java.util.UUID
+import com.example.feishuqa.data.model.HistoryChatItem
 
 /**
- * 模拟数据仓库，负责提供对话数据和模拟AI交互
+ * 聊天数据仓库
+ * 负责历史对话等数据管理
  */
 class ChatRepository {
 
-    // 内存中模拟存储消息
-    private val _localMessages = mutableListOf<Message>()
+    companion object {
+        @Volatile
+        private var instance: ChatRepository? = null
 
-    init {
-        // 初始为空，以展示欢迎页
-        // 如果需要测试列表页，可以手动发送一条消息
-    }
-
-    // 获取历史消息 (支持分页)
-    suspend fun getMessages(conversationId: String, page: Int, pageSize: Int = 20): List<Message> {
-        delay(200) // 模拟极快读取
-        return _localMessages.filter { it.conversationId == conversationId }
-            .sortedByDescending { it.timestamp }
-            .take(pageSize * page)
-    }
-
-    // 发送消息
-    suspend fun sendMessage(message: Message): Boolean {
-        delay(300)
-        _localMessages.add(0, message)
-        return true
-    }
-
-    // 模拟 AI 流式回复 (打字机效果)
-    fun streamAiResponse(userQuery: String, conversationId: String): Flow<String> = flow {
-        // 模拟深度思考时间
-        delay(1500)
-        
-        val fullResponse = mockAiResponse(userQuery)
-        val stringBuilder = StringBuilder()
-
-        // 模拟逐字输出
-        for (char in fullResponse) {
-            delay(30) // 打字速度
-            stringBuilder.append(char)
-            emit(stringBuilder.toString())
+        fun getInstance(): ChatRepository {
+            return instance ?: synchronized(this) {
+                instance ?: ChatRepository().also { instance = it }
+            }
         }
     }
 
-    private fun mockAiResponse(query: String): String {
-        return when {
-            query.contains("自我介绍") -> """
-                我是一个知识问答助手，主要擅长通过阅读、归纳和总结信息来为用户解答问题。无论是知识查询、信息整理还是日常疑问，我都会尽力提供准确、清晰的回答，帮助你高效获取所需内容。
-                
-                AI 基于你有权限的资料生成，数据保密仅你可见。
-            """.trimIndent()
-            query.contains("代码") -> """
-                好的，这是一个 Kotlin 的 Compose 示例：
-                ```kotlin
-                @Composable
-                fun Greeting(name: String) {
-                    Text(text = "Hello, ${'$'}name!")
-                }
-                ```
-                这段代码定义了一个简单的 UI 组件。
-            """.trimIndent()
-            else -> "我收到了你的消息：“$query”。\n这是一个模拟的 AI 回复。\n支持 **Markdown** 格式渲染。"
-        }
+    /**
+     * 获取历史对话列表
+     * TODO: 实际项目中从后端API获取
+     */
+    fun getHistoryChatList(): List<HistoryChatItem> {
+        // 模拟数据
+        return listOf(
+            HistoryChatItem("1", "简单介绍一下自己"),
+            HistoryChatItem("2", "如何使用飞书文档"),
+            HistoryChatItem("3", "项目进度汇报模板"),
+            HistoryChatItem("4", "团队协作最佳实践"),
+            HistoryChatItem("5", "会议纪要怎么写")
+        )
+    }
+
+    /**
+     * 创建新对话
+     * TODO: 实际项目中调用后端API
+     */
+    fun createNewChat(): String {
+        // 返回新对话ID
+        return System.currentTimeMillis().toString()
     }
 }
+
+
