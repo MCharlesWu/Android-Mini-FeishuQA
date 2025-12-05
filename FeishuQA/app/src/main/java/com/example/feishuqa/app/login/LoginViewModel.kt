@@ -1,6 +1,7 @@
 package com.example.feishuqa.app.login
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.feishuqa.data.entity.User
@@ -14,9 +15,12 @@ import kotlinx.coroutines.launch
  * 登录界面ViewModel
  * ViewModel层：处理登录业务逻辑
  */
-class LoginViewModel(private val context: Context) : ViewModel() {
+class LoginViewModel(private val context: Context) : ViewModel()
+{
 
-    private val repository = AuthRepository(context)
+    // LogicModel层
+    private val model = LoginModel(context)
+
 
     // UI状态
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -63,7 +67,8 @@ class LoginViewModel(private val context: Context) : ViewModel() {
 
         viewModelScope.launch {
             _uiState.value = currentState.copy(isLoading = true, error = null)
-            val result = repository.login(currentState.username, currentState.password)
+            val result = model.login(currentState.username, currentState.password)
+            Log.d("testLogic", "result = $result")
             result.onSuccess { user ->
                 _uiState.value = currentState.copy(isLoading = false)
                 _loginSuccess.value = user
