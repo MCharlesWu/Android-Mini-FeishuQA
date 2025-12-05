@@ -107,7 +107,6 @@ object JsonUtils
      *
      * @return Boolean
      */
-    // 函数签名和参数名改为 JSONArray
     fun overwriteJsonArray(context: Context, fileName: String, jsonArray: JSONArray): Boolean
     {
         return try
@@ -160,6 +159,36 @@ object JsonUtils
             file.writeText(jsonArray.toString())
 
             true
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    /**
+     * 删除对话文件
+     *
+     * @param context 上下文
+     * @param fileName 文件名
+     * @return 是否删除成功
+     *
+     * 可以删除文件，也可以删除空目录。
+     */
+    fun deleteJSONFile(context: Context, fileName: String): Boolean
+    {
+        return try
+        {
+            val file = File(context.filesDir, fileName)
+            if (file.exists())
+            {
+                file.delete()
+            }
+            else
+            {
+                true
+            }
         }
         catch (e: Exception)
         {
