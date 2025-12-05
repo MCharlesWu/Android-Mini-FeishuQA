@@ -11,11 +11,14 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.feishuqa.R
 import com.example.feishuqa.data.entity.Conversation
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -45,8 +48,8 @@ class HistoryFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 初始化 ViewModel
-        viewModel = ViewModelProvider(this)[HistoryViewModel::class.java]
+        // 初始化 ViewModel（传入 Context）
+        viewModel = HistoryViewModel(requireContext())
 
         // 初始化视图
         initViews(view)
@@ -78,29 +81,34 @@ class HistoryFragment : Fragment() {
     }
 
     private fun observeViewModel() {
-        viewModel.uiState.observe(viewLifecycleOwner) { uiState ->
-            // 更新加载状态
-            progressBar.visibility = if (uiState.isLoading) View.VISIBLE else View.GONE
+        // 使用协程收集 StateFlow
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { uiState ->
+                    // 更新加载状态
+                    progressBar.visibility = if (uiState.isLoading) View.VISIBLE else View.GONE
 
-            // 更新错误状态
-            if (uiState.error != null) {
-                tvError.visibility = View.VISIBLE
-                tvError.text = uiState.error
-                recyclerView.visibility = View.GONE
-                llEmptyState.visibility = View.GONE
-            } else {
-                tvError.visibility = View.GONE
-            }
+                    // 更新错误状态
+                    if (uiState.error != null) {
+                        tvError.visibility = View.VISIBLE
+                        tvError.text = uiState.error
+                        recyclerView.visibility = View.GONE
+                        llEmptyState.visibility = View.GONE
+                    } else {
+                        tvError.visibility = View.GONE
+                    }
 
-            // 更新列表
-            val filteredConversations = uiState.getFilteredConversations()
-            if (filteredConversations.isEmpty() && !uiState.isLoading) {
-                llEmptyState.visibility = View.VISIBLE
-                recyclerView.visibility = View.GONE
-            } else {
-                llEmptyState.visibility = View.GONE
-                recyclerView.visibility = View.VISIBLE
-                adapter.submitList(filteredConversations)
+                    // 更新列表
+                    val filteredConversations = uiState.getFilteredConversations()
+                    if (filteredConversations.isEmpty() && !uiState.isLoading) {
+                        llEmptyState.visibility = View.VISIBLE
+                        recyclerView.visibility = View.GONE
+                    } else {
+                        llEmptyState.visibility = View.GONE
+                        recyclerView.visibility = View.VISIBLE
+                        adapter.submitList(filteredConversations)
+                    }
+                }
             }
         }
     }
@@ -175,4 +183,3 @@ class ConversationAdapter(
         }
     }
 }
-

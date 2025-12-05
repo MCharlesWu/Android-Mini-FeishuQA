@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/drawer_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    tools:context=".MainActivity">
+
+    <!-- 主内容区域 - 使用ConstraintLayout -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/main_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#FFFFFF">
+
+        <!-- 顶部导航栏 -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/top_bar"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <!-- 登录按钮 -->
+            <TextView
+                android:id="@+id/btn_login"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="登录"
+                android:textColor="#1F2329"
+                android:textSize="16sp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <!-- 菜单按钮（打开侧边栏） -->
+            <ImageButton
+                android:id="@+id/btn_menu"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_menu"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="菜单"
+                android:scaleType="centerInside"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <!-- 新建对话按钮 -->
+            <ImageButton
+                android:id="@+id/btn_new_chat"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_add"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="新建对话"
+                android:scaleType="centerInside"
+                app:layout_constraintEnd_toStartOf="@id/btn_menu"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- 欢迎区域 - 居中显示 -->
+        <LinearLayout
+            android:id="@+id/welcome_section"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingHorizontal="32dp"
+            app:layout_constraintTop_toBottomOf="@id/top_bar"
+            app:layout_constraintBottom_toTopOf="@id/input_bar"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <!-- Logo - 渐变圆环 -->
+            <ImageView
+                android:id="@+id/logo_image"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:src="@drawable/bg_gradient_ring"
+                android:contentDescription="Logo" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="32dp" />
+
+            <!-- 欢迎标题 -->
+            <TextView
+                android:id="@+id/tv_welcome_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="嗨！这里是飞书知识问答"
+                android:textColor="#1F2329"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="12dp" />
+
+            <!-- 欢迎副标题 -->
+            <TextView
+                android:id="@+id/tv_welcome_subtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="整合你可访问的 2,140,886 个知识点，AI 搜索生成回答"
+                android:textColor="#646A73"
+                android:textSize="14sp"
+                android:textAlignment="center"
+                android:lineSpacingExtra="4dp" />
+
+        </LinearLayout>
+
+        <!-- 底部输入栏 -->
+        <include
+            android:id="@+id/input_bar"
+            layout="@layout/layout_input_bar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- 侧边栏内容 - 使用LinearLayout -->
+    <include
+        android:id="@+id/nav_drawer"
+        layout="@layout/layout_drawer"
+        android:layout_width="300dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:fitsSystemWindows="true" />
+
+</androidx.drawerlayout.widget.DrawerLayout>

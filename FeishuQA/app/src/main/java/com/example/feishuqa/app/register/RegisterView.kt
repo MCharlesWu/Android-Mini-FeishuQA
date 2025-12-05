@@ -1,7 +1,6 @@
-package com.example.feishuqa.app.login
+package com.example.feishuqa.app.register
 
 import android.content.Context
-import android.content.Intent
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod
 import android.view.animation.Animation
@@ -11,18 +10,17 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.feishuqa.R
-import com.example.feishuqa.app.register.RegisterActivity
-import com.example.feishuqa.databinding.ActivityLoginBinding
+import com.example.feishuqa.databinding.ActivityRegisterBinding
 import kotlinx.coroutines.launch
 
 /**
- * 登录界面View层
+ * 注册界面View层
  * View层：负责UI展示和用户交互
  */
-class LoginView(
+class RegisterView(
     private val context: Context,
-    private val binding: ActivityLoginBinding,
-    private val viewModel: LoginViewModel,
+    private val binding: ActivityRegisterBinding,
+    private val viewModel: RegisterViewModel,
     private val lifecycleOwner: LifecycleOwner
 ) {
 
@@ -49,23 +47,27 @@ class LoginView(
             viewModel.togglePasswordVisibility()
         }
 
-        // 登录按钮
-        binding.btnLogin.setOnClickListener {
-            viewModel.login()
+        // 确认密码显示/隐藏切换
+        binding.btnToggleConfirmPassword.setOnClickListener {
+            viewModel.toggleConfirmPasswordVisibility()
         }
 
-        // 跳转注册
-        binding.tvRegister.setOnClickListener {
-            val intent = Intent(context, RegisterActivity::class.java)
-            context.startActivity(intent)
+        // 注册按钮
+        binding.btnRegister.setOnClickListener {
+            viewModel.register()
         }
 
-        // 用户名输入框
-        binding.etUsername.addTextChangedListener(object : android.text.TextWatcher {
+        // 返回登录
+        binding.tvBackToLogin.setOnClickListener {
+            (context as? android.app.Activity)?.finish()
+        }
+
+        // 账号输入框
+        binding.etAccount.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) {
-                viewModel.updateUsername(s?.toString() ?: "")
+                viewModel.updateAccount(s?.toString() ?: "")
             }
         })
 
@@ -75,6 +77,15 @@ class LoginView(
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) {
                 viewModel.updatePassword(s?.toString() ?: "")
+            }
+        })
+
+        // 确认密码输入框
+        binding.etConfirmPassword.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                viewModel.updateConfirmPassword(s?.toString() ?: "")
             }
         })
     }
@@ -90,11 +101,11 @@ class LoginView(
                     updateUI(state)
                 }
 
-                // 观察登录成功事件
-                viewModel.loginSuccess.collect { user ->
+                // 观察注册成功事件
+                viewModel.registerSuccess.collect { user ->
                     user?.let {
-                        Toast.makeText(context, "登录成功", Toast.LENGTH_SHORT).show()
-                        viewModel.clearLoginSuccess()
+                        Toast.makeText(context, "注册成功", Toast.LENGTH_SHORT).show()
+                        viewModel.clearRegisterSuccess()
                         (context as? android.app.Activity)?.finish()
                     }
                 }
@@ -105,7 +116,7 @@ class LoginView(
     /**
      * 更新UI
      */
-    private fun updateUI(state: LoginUiState) {
+    private fun updateUI(state: RegisterUiState) {
         // 更新密码可见性
         if (state.isPasswordVisible) {
             binding.etPassword.transformationMethod = HideReturnsTransformationMethod.getInstance()
@@ -116,12 +127,22 @@ class LoginView(
         }
         binding.etPassword.setSelection(binding.etPassword.text.length)
 
-        // 更新加载状态
-        binding.btnLogin.isEnabled = !state.isLoading
-        if (state.isLoading) {
-            binding.btnLogin.text = "登录中..."
+        // 更新确认密码可见性
+        if (state.isConfirmPasswordVisible) {
+            binding.etConfirmPassword.transformationMethod = HideReturnsTransformationMethod.getInstance()
+            binding.btnToggleConfirmPassword.setImageResource(R.drawable.ic_visibility)
         } else {
-            binding.btnLogin.text = "登录"
+            binding.etConfirmPassword.transformationMethod = PasswordTransformationMethod.getInstance()
+            binding.btnToggleConfirmPassword.setImageResource(R.drawable.ic_visibility_off)
+        }
+        binding.etConfirmPassword.setSelection(binding.etConfirmPassword.text.length)
+
+        // 更新加载状态
+        binding.btnRegister.isEnabled = !state.isLoading
+        if (state.isLoading) {
+            binding.btnRegister.text = "注册中..."
+        } else {
+            binding.btnRegister.text = "注册"
         }
 
         // 显示错误

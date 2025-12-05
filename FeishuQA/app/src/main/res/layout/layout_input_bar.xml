@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 底部输入栏布局 - 支持语音/文字切换 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#FFFFFF"
+    android:paddingTop="8dp"
+    android:paddingBottom="24dp">
+
+    <!-- 第一行：功能按钮区域（联网搜索 + 模型选择） -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="4dp">
+
+        <!-- 联网搜索按钮 -->
+        <LinearLayout
+            android:id="@+id/btn_web_search"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_chip_normal"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/ic_web_search"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_globe"
+                android:contentDescription="联网搜索" />
+
+            <TextView
+                android:id="@+id/tv_web_search"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="联网搜索"
+                android:textColor="#646A73"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+        <Space
+            android:layout_width="8dp"
+            android:layout_height="match_parent" />
+
+        <!-- 模型选择按钮 -->
+        <LinearLayout
+            android:id="@+id/btn_model_select"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_chip_normal"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/tv_selected_model"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DeepSeek R1"
+                android:textColor="#646A73"
+                android:textSize="12sp" />
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginStart="4dp"
+                android:src="@drawable/ic_arrow_down"
+                android:contentDescription="选择模型" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- 第二行：输入框主体 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="8dp">
+
+        <!-- 左侧：附件上传按钮 -->
+        <ImageButton
+            android:id="@+id/btn_attach"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_attach"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="上传附件"
+            android:scaleType="centerInside" />
+
+        <Space
+            android:layout_width="4dp"
+            android:layout_height="match_parent" />
+
+        <!-- 语音/键盘切换按钮 -->
+        <ImageButton
+            android:id="@+id/btn_toggle_input_mode"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_mic"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="切换输入模式"
+            android:scaleType="centerInside" />
+
+        <Space
+            android:layout_width="4dp"
+            android:layout_height="match_parent" />
+
+        <!-- 输入区域容器 -->
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1">
+
+            <!-- 文字输入框 -->
+            <EditText
+                android:id="@+id/et_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="40dp"
+                android:maxLines="5"
+                android:background="@drawable/bg_input_field"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="10dp"
+                android:hint="问个问题，或用知识写点内容"
+                android:textColor="#1F2329"
+                android:textColorHint="#8F959E"
+                android:textSize="16sp"
+                android:inputType="textMultiLine"
+                android:importantForAutofill="no"
+                android:visibility="visible" />
+
+            <!-- 语音输入按钮（长按说话） -->
+            <TextView
+                android:id="@+id/btn_voice_input"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_voice_button"
+                android:gravity="center"
+                android:text="按住 说话"
+                android:textColor="#1F2329"
+                android:textSize="16sp"
+                android:visibility="gone" />
+
+        </FrameLayout>
+
+        <Space
+            android:layout_width="8dp"
+            android:layout_height="match_parent" />
+
+        <!-- 右侧：发送按钮 -->
+        <ImageButton
+            android:id="@+id/btn_send"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_send"
+            android:background="@drawable/bg_send_button"
+            android:contentDescription="发送"
+            android:scaleType="centerInside"
+            android:padding="8dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+</LinearLayout>

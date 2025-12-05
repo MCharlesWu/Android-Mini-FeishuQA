@@ -33,6 +33,18 @@
         <meta-data
             android:name="com.baidu.speech.SECRET_KEY"
             android:value="***" />
+        
+        <!-- 登录界面 -->
+        <activity
+            android:name=".app.login.LoginActivity"
+            android:exported="false"
+            android:theme="@style/Theme.FeishuQA" />
+        
+        <!-- 注册界面 -->
+        <activity
+            android:name=".app.register.RegisterActivity"
+            android:exported="false"
+            android:theme="@style/Theme.FeishuQA" />
     </application>
 
     <uses-permission android:name="android.permission.RECORD_AUDIO"
