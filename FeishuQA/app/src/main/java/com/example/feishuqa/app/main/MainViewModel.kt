@@ -33,6 +33,14 @@ class MainViewModel(private val context: Context) : ViewModel() {
     }
 
     /**
+     * 设置当前用户ID（应该在登录后调用）
+     */
+    fun setUserId(userId: String) {
+        repository.setUserId(userId)
+        loadConversations() // 重新加载对话列表
+    }
+
+    /**
      * 加载历史对话列表
      */
     fun loadConversations() {
@@ -129,6 +137,58 @@ class MainViewModel(private val context: Context) : ViewModel() {
     fun getAvailableModels(): List<AIModel> {
         return repository.getAvailableModels()
     }
+
+    /**
+     * 更新搜索关键词
+     */
+    fun updateSearchQuery(query: String) {
+        _uiState.value = _uiState.value.copy(searchQuery = query)
+    }
+
+    /**
+     * 删除对话
+     */
+    fun deleteConversation(conversationId: String) {
+        viewModelScope.launch {
+            try {
+                repository.deleteConversation(conversationId)
+                loadConversations() // 重新加载列表
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
+
+    /**
+     * 重命名对话
+     */
+    fun renameConversation(conversationId: String, newTitle: String) {
+        viewModelScope.launch {
+            try {
+                repository.renameConversation(conversationId, newTitle)
+                loadConversations() // 重新加载列表
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
+
+    /**
+     * 切换置顶状态
+     */
+    fun togglePinConversation(conversationId: String) {
+        viewModelScope.launch {
+            try {
+                val currentState = _uiState.value
+                val conversation = currentState.conversations.find { it.id == conversationId }
+                val newPinnedState = !(conversation?.isPinned ?: false)
+                repository.togglePinConversation(conversationId, newPinnedState)
+                loadConversations() // 重新加载列表
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
 }
 
 /**
@@ -141,6 +201,27 @@ data class MainUiState(
     val selectedModel: AIModel = AIModels.defaultModel,
     val isWebSearchEnabled: Boolean = false,
     val isTextInputMode: Boolean = true,
-    val selectedConversationId: String? = null
-)
+    val selectedConversationId: String? = null,
+    val searchQuery: String = "" // 搜索关键词
+) {
+    /**
+     * 获取过滤后的对话列表（根据搜索关键词和置顶状态排序）
+     */
+    fun getFilteredConversations(): List<Conversation> {
+        val filtered = if (searchQuery.isBlank()) {
+            conversations
+        } else {
+            conversations.filter {
+                it.title.contains(searchQuery, ignoreCase = true) ||
+                it.lastMessage?.contains(searchQuery, ignoreCase = true) == true
+            }
+        }
+        
+        // 置顶的排在前面，然后按时间倒序
+        return filtered.sortedWith(
+            compareByDescending<Conversation> { it.isPinned }
+                .thenByDescending { it.lastMessageTime }
+        )
+    }
+}
 

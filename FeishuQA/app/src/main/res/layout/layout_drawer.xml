@@ -77,6 +77,24 @@
         android:layout_width="match_parent"
         android:layout_height="8dp" />
 
+    <!-- 搜索框 -->
+    <EditText
+        android:id="@+id/et_search_history"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:hint="搜索对话..."
+        android:background="@drawable/bg_search_box"
+        android:padding="12dp"
+        android:singleLine="true"
+        android:textSize="14sp"
+        android:drawableStart="@android:drawable/ic_menu_search"
+        android:drawablePadding="8dp" />
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="8dp" />
+
     <!-- 4. 历史对话列表 - RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_history"

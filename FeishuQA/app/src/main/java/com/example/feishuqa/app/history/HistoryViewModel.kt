@@ -1,133 +1,76 @@
 package com.example.feishuqa.app.history
 
+import android.app.Application
 import android.content.Context
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.example.feishuqa.common.utils.JsonUtils
 import com.example.feishuqa.data.entity.Conversation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 
 /**
  * 历史对话 ViewModel
- * 不使用索引文件，通过遍历目录加载所有对话文件
+ * 使用新的索引文件结构，通过 HistoryModel 访问数据
+ * 支持 Compose (StateFlow) 和 XML (LiveData) 两种 UI 框架
  */
-class HistoryViewModel(private val context: Context) : ViewModel() {
+class HistoryViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _uiState = MutableStateFlow(HistoryUiState())
-    val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
+    private val context = application.applicationContext
+    private val historyModel = HistoryModel(context)
+
+    // StateFlow 用于 Compose UI
+    private val _uiStateFlow = MutableStateFlow(HistoryUiState())
+    val uiState: StateFlow<HistoryUiState> = _uiStateFlow.asStateFlow()
+
+    // LiveData 用于 XML UI (Fragment)
+    private val _uiStateLiveData = MutableLiveData<HistoryUiState>(HistoryUiState())
+    val uiStateLiveData: LiveData<HistoryUiState> = _uiStateLiveData
+
+    // 同步更新两个状态
+    private fun updateUiState(newState: HistoryUiState) {
+        _uiStateFlow.value = newState
+        _uiStateLiveData.value = newState
+    }
+
+    // 当前登录用户ID（应该从登录模块获取，这里暂时使用默认值）
+    private var currentUserId: String = "1"
 
     init {
         loadConversations()
     }
 
     /**
-     * 从所有对话文件中加载对话列表
-     * 遍历目录，读取每个文件，提取信息
+     * 设置当前用户ID
      */
-    fun loadConversations() {
-        viewModelScope.launch {
-            val currentState = _uiState.value
-            _uiState.value = currentState.copy(isLoading = true, error = null)
-            
-            try {
-                // 1. 获取所有对话文件名
-                val fileNames = JsonUtils.getAllConversationFiles(context)
-                
-                // 2. 读取每个文件，提取信息
-                val conversations = mutableListOf<Conversation>()
-                fileNames.forEach { fileName ->
-                    try {
-                        val conversation = loadConversationFromFile(fileName)
-                        if (conversation != null) {
-                            conversations.add(conversation)
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        // 单个文件读取失败，继续处理其他文件
-                    }
-                }
-                
-                _uiState.value = currentState.copy(
-                    conversations = conversations,
-                    isLoading = false
-                )
-            } catch (e: Exception) {
-                _uiState.value = currentState.copy(
-                    isLoading = false,
-                    error = e.message ?: "加载失败"
-                )
-            }
-        }
+    fun setUserId(userId: String) {
+        currentUserId = userId
+        loadConversations()
     }
 
     /**
-     * 从单个对话文件中加载对话信息
+     * 从索引文件加载对话列表
      */
-    private fun loadConversationFromFile(fileName: String): Conversation? {
-        return try {
-            // 1. 读取文件内容
-            val content = JsonUtils.readJsonFromFiles(context, fileName)
-            if (content.isBlank() || content == "[]") {
-                return null
-            }
+    fun loadConversations() {
+        viewModelScope.launch {
+            val currentState = _uiStateFlow.value
+            updateUiState(currentState.copy(isLoading = true, error = null))
 
-            // 2. 解析 JSON
-            val json = JSONObject(content)
-            
-            // 3. 从文件名提取 ID
-            val id = JsonUtils.extractIdFromFileName(fileName)
-            
-            // 4. 提取标题
-            val title = json.optString("title", "新对话")
-            
-            // 5. 提取最后一条消息
-            val lastMessage: String? = if (json.has("messages") && !json.isNull("messages")) {
-                val messagesArray = json.getJSONArray("messages")
-                if (messagesArray.length() > 0) {
-                    val lastMsg = messagesArray.getJSONObject(messagesArray.length() - 1)
-                    val content = lastMsg.optString("content", "")
-                    if (content.isNotEmpty()) content else null
-                } else {
-                    null
-                }
-            } else {
-                null
+            try {
+                val conversations = historyModel.getAllConversations(currentUserId)
+                updateUiState(currentState.copy(
+                    conversations = conversations,
+                    isLoading = false
+                ))
+            } catch (e: Exception) {
+                updateUiState(currentState.copy(
+                    isLoading = false,
+                    error = e.message ?: "加载失败"
+                ))
             }
-            
-            // 6. 提取时间信息
-            val updatedTime = json.optLong("updatedTime", System.currentTimeMillis())
-            val createdTime = json.optLong("createdTime", updatedTime)
-            
-            // 7. 统计消息数量
-            val messageCount = if (json.has("messages") && !json.isNull("messages")) {
-                json.getJSONArray("messages").length()
-            } else {
-                0
-            }
-            
-            // 8. 提取其他信息
-            val isPinned = json.optBoolean("isPinned", false)
-            val userId = if (json.has("userId")) json.getInt("userId") else null
-            
-            // 9. 创建 Conversation 对象
-            Conversation(
-                id = id,
-                title = title,
-                lastMessage = lastMessage,
-                lastMessageTime = updatedTime,
-                messageCount = messageCount,
-                isPinned = isPinned,
-                createdAt = createdTime,
-                updatedTime = updatedTime,
-                userId = userId
-            )
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
         }
     }
 
@@ -135,15 +78,84 @@ class HistoryViewModel(private val context: Context) : ViewModel() {
      * 更新搜索关键词
      */
     fun updateSearchQuery(query: String) {
-        val currentState = _uiState.value
-        _uiState.value = currentState.copy(searchQuery = query)
+        val currentState = _uiStateFlow.value
+        updateUiState(currentState.copy(searchQuery = query))
     }
 
     /**
      * 选择对话
      */
     fun selectConversation(conversationId: String) {
-        val currentState = _uiState.value
-        _uiState.value = currentState.copy(selectedConversationId = conversationId)
+        val currentState = _uiStateFlow.value
+        updateUiState(currentState.copy(selectedConversationId = conversationId))
+    }
+
+    /**
+     * 删除对话
+     */
+    fun deleteConversation(conversationId: String) {
+        viewModelScope.launch {
+            try {
+                historyModel.deleteConversation(conversationId)
+                // 重新加载列表
+                loadConversations()
+            } catch (e: Exception) {
+                val currentState = _uiStateFlow.value
+                updateUiState(currentState.copy(error = e.message ?: "删除失败"))
+            }
+        }
+    }
+
+    /**
+     * 重命名对话
+     */
+    fun renameConversation(conversationId: String, newTitle: String) {
+        viewModelScope.launch {
+            try {
+                historyModel.updateConversationTitle(conversationId, newTitle)
+                // 重新加载列表
+                loadConversations()
+            } catch (e: Exception) {
+                val currentState = _uiStateFlow.value
+                updateUiState(currentState.copy(error = e.message ?: "重命名失败"))
+            }
+        }
+    }
+
+    /**
+     * 切换置顶状态
+     */
+    fun togglePinConversation(conversationId: String) {
+        viewModelScope.launch {
+            try {
+                // 获取当前状态
+                val currentState = _uiStateFlow.value
+                val conversation = currentState.conversations.find { it.id == conversationId }
+                val newPinnedState = !(conversation?.isPinned ?: false)
+
+                historyModel.togglePinConversation(conversationId, newPinnedState)
+                // 重新加载列表
+                loadConversations()
+            } catch (e: Exception) {
+                val currentState = _uiStateFlow.value
+                updateUiState(currentState.copy(error = e.message ?: "置顶操作失败"))
+            }
+        }
+    }
+
+    /**
+     * 创建新对话
+     */
+    fun createNewConversation(initialTitle: String = "新对话"): String? {
+        return try {
+            val newIndex = historyModel.createConversation(currentUserId, initialTitle)
+            // 重新加载列表
+            loadConversations()
+            newIndex.conversationId
+        } catch (e: Exception) {
+            val currentState = _uiStateFlow.value
+            updateUiState(currentState.copy(error = e.message ?: "创建对话失败"))
+            null
+        }
     }
 }
