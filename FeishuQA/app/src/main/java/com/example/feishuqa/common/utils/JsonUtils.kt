@@ -88,6 +88,11 @@ object JsonUtils
         return try
         {
             val file = File(context.filesDir, fileName)
+            val parent = file.parentFile
+            if (parent != null && !parent.exists())
+            {
+                parent.mkdirs() // 自动创建目录
+            }
             file.writeText(jsonObject.toString())   // 直接覆盖写入
             true
         }
@@ -112,6 +117,11 @@ object JsonUtils
         return try
         {
             val file = File(context.filesDir, fileName)
+            val parent = file.parentFile
+            if (parent != null && !parent.exists())
+            {
+                parent.mkdirs() // 自动创建目录
+            }
             // 核心操作：直接覆盖写入
             file.writeText(jsonArray.toString()) // 使用传入的 JSONArray
             true
@@ -156,6 +166,11 @@ object JsonUtils
 
             // 写回文件
             val file = File(context.filesDir, fileName)
+            val parent = file.parentFile
+            if (parent != null && !parent.exists())
+            {
+                parent.mkdirs()
+            }
             file.writeText(jsonArray.toString())
 
             true
