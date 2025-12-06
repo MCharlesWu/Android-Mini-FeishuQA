@@ -1,11 +1,9 @@
 package com.example.feishuqa.app.main
 
-import HistoryRepository
 import android.app.AlertDialog
 import android.content.Context
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.RotateAnimation
@@ -24,7 +22,6 @@ import com.example.feishuqa.databinding.ActivityMainBinding
 import com.example.feishuqa.databinding.LayoutDrawerBinding
 import com.example.feishuqa.databinding.LayoutInputBarBinding
 import kotlinx.coroutines.launch
-import kotlin.math.log
 
 /**
  * 主界面View层
@@ -45,55 +42,9 @@ class MainView(
      * 初始化View
      */
     fun init() {
-        val model = HistoryRepository(context)
-//        val resultList1 = model.createConversation2(context, "user_A", "222")
-//        Log.d("test", "init: $resultList1")
-
-
-        val resultList2 = model.getAllConversations("test_user_01")
-        Log.d("test", "init: $resultList2")
-
-//        var conversationDetail = model.getConversationDetail("conversation_1764992458418")
-//        Log.d("test", "init: $conversationDetail")
-
-        //model.updateConversationTitle("conversation_1764992458418", "444")
-//
-//        val USER_ID = "test_user_01"
-//
-//        Log.d("test1","--- 步骤 1: 创建新会话 ---")
-//        // 创建会话，获取 ID
-//        val newConv = model.createConversation2(context,USER_ID, "测试消息分页")
-//        val convId = newConv.conversationId
-//        Log.d("test1","新会话ID: $convId")
-//
-//        Log.d("test1","\n--- 步骤 2: 写入测试消息 (5条) ---")
-        // 调用 addMessage 5 次，确保消息文件 messages/conv_xxx/messages_001.json 被创建
-//        for (i in 1..5) {
-//            model.addMessage(convId, "用户消息 $i", isUser = true)
-//            model.addMessage(convId, "AI回复 $i", isUser = false)
-//        }
-//        for (i in 1..101) {
-//            model.addMessage(convId, "第 $i 条测试消息", isUser = true)
-//        }
-//        Log.d("test1","已写入 10 条消息到磁盘...")
-//
-//        Log.d("test1","\n--- 步骤 3: 调用待验证函数 (getAllMessages) ---")
-//        // 调用要测试的读取函数
-//        val messageList = model.getAllMessages(convId)
-//
-//        // --- 步骤 4: 验证结果 ---
-//        Log.d("test1","--- 步骤 4: 验证结果 ---")
-//
-//        if (messageList.size == 10) {
-//            Log.d("test1","✅ 验证成功: 列表长度正确 (10条消息)。")
-//        } else {
-//            Log.d("test1","❌ 验证失败: 列表长度错误 (实际: ${messageList.size})。")
-//        }
-//
-//        // 验证排序：第一条消息的 Order 应该是 1
-//        Log.d("test1","第一条消息内容: ${messageList.firstOrNull()?.content} | Order: ${messageList.firstOrNull()?.messageOrder}")
-//
-
+        // TODO: 从登录模块获取用户ID并设置
+        // viewModel.setUserId(userId)
+        
         setupTopBar()
         setupDrawer()
         setupInputBar()
@@ -145,15 +96,56 @@ class MainView(
      * 设置历史对话列表
      */
     private fun setupHistoryList() {
-        historyAdapter = HistoryConversationAdapter { conversation ->
-            binding.drawerLayout.closeDrawer(GravityCompat.START)
-            viewModel.selectConversation(conversation.id)
-        }
+        historyAdapter = HistoryConversationAdapter(
+            onItemClick = { conversation ->
+                binding.drawerLayout.closeDrawer(GravityCompat.START)
+                viewModel.selectConversation(conversation.id)
+            },
+            onDeleteClick = { conversationId ->
+                viewModel.deleteConversation(conversationId)
+            },
+            onRenameClick = { conversationId, currentTitle ->
+                showRenameDialog(conversationId, currentTitle)
+            },
+            onPinClick = { conversationId, isPinned ->
+                viewModel.togglePinConversation(conversationId)
+            }
+        )
 
         drawerBinding.rvHistory.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = historyAdapter
         }
+
+        // 设置搜索框
+        drawerBinding.etSearchHistory.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                viewModel.updateSearchQuery(s?.toString() ?: "")
+            }
+        })
+    }
+
+    /**
+     * 显示重命名对话框
+     */
+    private fun showRenameDialog(conversationId: String, currentTitle: String) {
+        val input = android.widget.EditText(context)
+        input.setText(currentTitle)
+        input.selectAll()
+
+        AlertDialog.Builder(context)
+            .setTitle("重命名对话")
+            .setView(input)
+            .setPositiveButton("确定") { _, _ ->
+                val newTitle = input.text.toString().trim()
+                if (newTitle.isNotEmpty()) {
+                    viewModel.renameConversation(conversationId, newTitle)
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
     /**
@@ -246,9 +238,12 @@ class MainView(
      * 更新UI
      */
     private fun updateUI(state: MainUiState) {
-        // 更新对话列表
-        historyAdapter.submitList(state.conversations)
-        if (state.conversations.isEmpty()) {
+        // 更新对话列表（使用过滤后的列表）
+        val filteredConversations = state.getFilteredConversations()
+        historyAdapter.submitList(filteredConversations)
+        historyAdapter.setSelectedConversation(state.selectedConversationId)
+        
+        if (filteredConversations.isEmpty() && !state.isLoading) {
             drawerBinding.rvHistory.visibility = View.GONE
             drawerBinding.layoutEmptyState.visibility = View.VISIBLE
         } else {
