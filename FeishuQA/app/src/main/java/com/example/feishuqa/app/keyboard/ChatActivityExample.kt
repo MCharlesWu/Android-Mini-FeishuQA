@@ -64,10 +64,10 @@ class MainActivity : AppCompatActivity() {
                 pickImageLauncher.launch("image/*")
             }
 
-            // 3. 预览小图点击
-            override fun onPreviewImageClick(uri: Any) {
-                showFullImageDialog(uri)
-            }
+            // 3. 预览小图点击（此方法已从接口中移除）
+            // override fun onPreviewImageClick(uri: Any) {
+            //     showFullImageDialog(uri)
+            // }
 
             // 4. 【新增】点击联网搜索
             override fun onWebSearchClick() {

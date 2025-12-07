@@ -8,12 +8,14 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.example.feishuqa.app.login.LoginActivity
 import com.example.feishuqa.app.main.MainView
 import com.example.feishuqa.app.main.MainViewModel
 import com.example.feishuqa.app.main.MainViewModelFactory
 import com.example.feishuqa.common.utils.SessionManager
 import com.example.feishuqa.databinding.ActivityMainBinding
+import kotlinx.coroutines.launch
 
 /**
  * 主界面Activity
@@ -27,7 +29,7 @@ class MainActivity : AppCompatActivity() {
 
     // 【新增 1】 定义 Repository 和 Factory (用于 ChatInputView)
     // 如果你项目里已经有了单例模式，可以直接调用，这里为了保险起见写全
-    private val chatViewModelFactory by lazy {
+    internal val chatViewModelFactory by lazy {
         com.example.feishuqa.app.keyboard.ChatViewModelFactory(
             com.example.feishuqa.data.repository.ChatRepositoryExample.getInstance(applicationContext)
         )
@@ -83,6 +85,20 @@ class MainActivity : AppCompatActivity() {
         
         mainView = MainView(this, binding, drawerBinding, binding.chatInputView, viewModel, this)
         mainView.init()
+
+        // 初始化聊天显示组件
+        initChatDisplay()
+
+        // 监听导航事件，当创建新对话或选择对话时在主界面直接加载对话
+        lifecycleScope.launch {
+            viewModel.navigateToConversation.collect { conversationId ->
+                conversationId?.let {
+                    // 直接在主界面加载对话，不需要跳转到其他Activity
+                    displayViewModel.setCurrentConversation(it)
+                    viewModel.clearNavigation()
+                }
+            }
+        }
     }
 
     /**
@@ -111,6 +127,35 @@ class MainActivity : AppCompatActivity() {
             .setNegativeButton("取消", null)
             .show()
     }
+
+    /**
+     * 初始化聊天显示组件
+     */
+    private fun initChatDisplay() {
+        // 初始化ChatDisplayView
+        binding.chatDisplayView.init(this, chatViewModelFactory)
+        
+        // 监听消息变化，控制欢迎区域和聊天区域的显示切换
+        val displayViewModel = androidx.lifecycle.ViewModelProvider(this, chatViewModelFactory)
+            .get(com.example.feishuqa.app.keyboard.ChatDisplayViewModel::class.java)
+        
+        displayViewModel.messages.observe(this) { messages ->
+            if (messages.isNullOrEmpty()) {
+                // 没有消息时显示欢迎区域
+                binding.welcomeSection.visibility = android.view.View.VISIBLE
+                binding.chatDisplayView.visibility = android.view.View.GONE
+            } else {
+                // 有消息时显示聊天区域
+                binding.welcomeSection.visibility = android.view.View.GONE
+                binding.chatDisplayView.visibility = android.view.View.VISIBLE
+            }
+        }
+        
+        // 保存displayViewModel实例用于导航事件
+        this.displayViewModel = displayViewModel
+    }
+    
+    private lateinit var displayViewModel: com.example.feishuqa.app.keyboard.ChatDisplayViewModel
 
     /**
      * 当Activity恢复时刷新登录状态

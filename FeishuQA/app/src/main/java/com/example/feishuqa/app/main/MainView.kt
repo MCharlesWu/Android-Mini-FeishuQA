@@ -17,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.feishuqa.R
+import com.example.feishuqa.MainActivity
 import com.example.feishuqa.adapter.HistoryConversationAdapter
 import com.example.feishuqa.app.keyboard.ChatInputView
 import com.example.feishuqa.app.login.LoginActivity
@@ -210,7 +211,8 @@ class MainView(
                 launch {
                     viewModel.navigateToConversation.collect { conversationId ->
                         conversationId?.let {
-                            Toast.makeText(context, "打开对话: $it", Toast.LENGTH_SHORT).show()
+                            // 切换到新对话
+                            switchToConversation(it)
                             viewModel.clearNavigation()
                         }
                     }
@@ -369,5 +371,15 @@ class MainView(
         }
         binding.logoImage.startAnimation(rotateAnimation)
     }
+    
+    /**
+     * 切换到指定对话
+     */
+    private fun switchToConversation(conversationId: String) {
+        // 设置当前选中的对话
+        viewModel.selectConversation(conversationId)
+        
+        // 显示提示
+        Toast.makeText(context, "已切换到新对话", Toast.LENGTH_SHORT).show()
+    }
 }
-

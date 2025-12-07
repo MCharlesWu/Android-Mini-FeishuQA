@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- AI头像背景 - 彩色渐变，参考KIMI风格 -->
+    <gradient
+        android:startColor="#9F33FF"
+        android:centerColor="#3370FF"
+        android:endColor="#00C4FF"
+        android:angle="45"/>
+    
+    <!-- 圆形 -->
+    <corners android:radius="18dp"/>
+</shape>
