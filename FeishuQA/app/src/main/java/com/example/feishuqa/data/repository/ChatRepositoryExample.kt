@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.example.feishuqa.app.history.HistoryModel
 import com.example.feishuqa.common.utils.ImageUtils
 import com.example.feishuqa.common.utils.JsonUtils
 import com.example.feishuqa.data.entity.Message
@@ -32,8 +33,8 @@ class ChatRepositoryExample private constructor(private val context: Context) {
     // 当前对话ID
     private var currentConversationId: String? = null
     
-    // 本地存储文件名（根据对话ID区分）
-    private fun getChatHistoryFile(conversationId: String): String = "chat_history_$conversationId.json"
+    // 使用 HistoryModel 统一管理消息存储（新结构）
+    private val historyModel = HistoryModel(context)
 
     companion object {
         @Volatile
@@ -124,8 +125,17 @@ class ChatRepositoryExample private constructor(private val context: Context) {
                 updateMessageContent(aiMsgId, fullContent)
             }
             
-            // 5. 更新消息状态为已发送
+            // 5. 更新消息状态为已发送，并保存到新结构
             updateMessageStatus(aiMsgId, null, MessageStatus.SENT)
+            
+            // 6. 确保AI回复保存到新结构（updateMessageStatus 会调用，但这里再确认一次）
+            withContext(Dispatchers.Main) {
+                val list = _messages.value ?: return@withContext
+                val aiMessage = list.find { it.id == aiMsgId }
+                aiMessage?.let {
+                    saveMessageToHistoryModel(it.copy(content = fullContent))
+                }
+            }
         }
     }
 
@@ -133,7 +143,11 @@ class ChatRepositoryExample private constructor(private val context: Context) {
         val list = _messages.value ?: mutableListOf()
         list.add(msg)
         _messages.postValue(list)
-        saveChatHistory() // 保存到本地
+        // 如果消息状态是已发送，保存到新结构
+        // 注意：SENDING 状态的消息会在状态更新为 SENT 时再保存
+        if (msg.status == MessageStatus.SENT) {
+            saveMessageToHistoryModel(msg)
+        }
     }
 
     private suspend fun updateMessageStatus(id: String, realPath: String?, status: MessageStatus) {
@@ -148,7 +162,10 @@ class ChatRepositoryExample private constructor(private val context: Context) {
                 )
                 list[targetIndex] = updatedMessage
                 _messages.value = list // 触发刷新
-                saveChatHistory() // 保存到本地
+                // 如果状态变为已发送，保存到新结构
+                if (status == MessageStatus.SENT) {
+                    saveMessageToHistoryModel(updatedMessage)
+                }
             }
         }
     }
@@ -168,39 +185,32 @@ class ChatRepositoryExample private constructor(private val context: Context) {
     
     /**
      * 加载本地聊天历史
+     * 使用新结构（HistoryModel）加载消息
      */
     private fun loadChatHistory() {
         val conversationId = currentConversationId ?: return
         
         try {
-            val fileName = getChatHistoryFile(conversationId)
-            val jsonContent = JsonUtils.readJsonFromFiles(context, fileName)
-            if (jsonContent.isNotEmpty() && jsonContent != "[]") {
-                val jsonArray = JSONArray(jsonContent)
-                val loadedMessages = mutableListOf<Message>()
-                
-                for (i in 0 until jsonArray.length()) {
-                    val jsonObject = jsonArray.getJSONObject(i)
-                    val message = Message(
-                        id = jsonObject.getString("id"),
-                        conversationId = jsonObject.getString("conversationId"),
-                        senderId = jsonObject.getString("senderId"),
-                        type = MessageType.valueOf(jsonObject.getString("type")),
-                        content = jsonObject.getString("content"),
-                        extraInfo = jsonObject.optString("extraInfo").takeIf { it.isNotEmpty() },
-                        timestamp = jsonObject.getLong("timestamp"),
-                        status = MessageStatus.valueOf(jsonObject.getString("status"))
-                    )
-                    loadedMessages.add(message)
-                }
-                
-                // 按时间戳排序（最新的在最后）
-                loadedMessages.sortBy { it.timestamp }
-                _messages.postValue(loadedMessages)
-            } else {
-                // 没有历史消息，清空当前列表
-                _messages.postValue(mutableListOf())
+            // 从新结构加载消息（使用 HistoryModel）
+            val messageDetails = historyModel.getAllMessages(conversationId)
+            
+            // 将 MessageDetail 转换为 Message
+            val loadedMessages = messageDetails.map { detail ->
+                Message(
+                    id = detail.messageId,
+                    conversationId = conversationId,
+                    senderId = if (detail.senderType == 0) "user" else "ai",
+                    type = MessageType.TEXT, // MessageDetail 目前只支持文本
+                    content = detail.content,
+                    extraInfo = null, // MessageDetail 没有 extraInfo
+                    timestamp = detail.timestamp,
+                    status = MessageStatus.SENT // 已保存的消息都是已发送状态
+                )
             }
+            
+            // 按时间戳排序（最新的在最后）
+            val sortedMessages = loadedMessages.sortedBy { it.timestamp }
+            _messages.postValue(sortedMessages.toMutableList())
         } catch (e: Exception) {
             e.printStackTrace()
             // 如果加载失败，保持空列表
@@ -209,31 +219,38 @@ class ChatRepositoryExample private constructor(private val context: Context) {
     }
     
     /**
-     * 保存聊天历史到本地
+     * 保存消息到新结构（HistoryModel）
+     * 只保存已发送的消息，避免保存中间状态（SENDING、TYPING等）
+     * 
+     * 注意：HistoryModel.addMessage() 会生成新的 messageId，所以这里通过内容+时间戳来判断是否重复
      */
-    private fun saveChatHistory() {
+    private fun saveMessageToHistoryModel(message: Message) {
         val conversationId = currentConversationId ?: return
         
+        // 只保存已发送的消息
+        if (message.status != MessageStatus.SENT) {
+            return
+        }
+        
         try {
-            val messages = _messages.value ?: return
-            val jsonArray = JSONArray()
-            
-            messages.forEach { message ->
-                val jsonObject = JSONObject().apply {
-                    put("id", message.id)
-                    put("conversationId", message.conversationId)
-                    put("senderId", message.senderId)
-                    put("type", message.type.name)
-                    put("content", message.content)
-                    put("extraInfo", message.extraInfo ?: "")
-                    put("timestamp", message.timestamp)
-                    put("status", message.status.name)
-                }
-                jsonArray.put(jsonObject)
+            // 检查消息是否已经存在于新结构中（通过内容和时间戳判断，避免重复保存）
+            val existingMessages = historyModel.getAllMessages(conversationId)
+            val isDuplicate = existingMessages.any { 
+                it.content == message.content && 
+                Math.abs(it.timestamp - message.timestamp) < 1000 // 1秒内的相同内容视为重复
             }
             
-            val fileName = getChatHistoryFile(conversationId)
-            JsonUtils.overwriteJsonArray(context, fileName, jsonArray)
+            if (isDuplicate) {
+                // 消息已存在，不重复保存
+                return
+            }
+            
+            // 判断是用户消息还是AI消息
+            val isUser = message.senderId == "user"
+            
+            // 使用 HistoryModel 保存消息
+            // 注意：HistoryModel.addMessage() 会生成新的 messageId，与 Message.id 可能不同
+            historyModel.addMessage(conversationId, message.content, isUser)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -241,6 +258,8 @@ class ChatRepositoryExample private constructor(private val context: Context) {
     
     /**
      * 清空当前对话的聊天历史
+     * 注意：现在使用新结构，消息存储在 HistoryModel 中
+     * 如果需要清空，应该通过 HistoryModel 删除对话，而不是只清空消息
      */
     fun clearChatHistory() {
         val conversationId = currentConversationId ?: return
@@ -248,9 +267,8 @@ class ChatRepositoryExample private constructor(private val context: Context) {
         try {
             // 清空内存中的消息
             _messages.postValue(mutableListOf())
-            // 删除本地文件
-            val fileName = getChatHistoryFile(conversationId)
-            context.deleteFile(fileName)
+            // 注意：不再删除旧结构的文件，因为现在使用新结构
+            // 如果需要删除对话，应该调用 HistoryModel.deleteConversation()
         } catch (e: Exception) {
             e.printStackTrace()
         }

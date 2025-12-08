@@ -19,9 +19,13 @@ class MainRepository(private val context: Context) {
     // 使用我们完成的 HistoryModel
     private val historyModel = HistoryModel(context)
 
-    // 当前登录用户ID（应该从登录模块获取，这里暂时使用默认值）
-    // TODO: 从登录模块获取实际用户ID
-    private var currentUserId: String = "1"
+    // 未登录用户的标识
+    companion object {
+        const val GUEST_USER_ID = "guest"
+    }
+
+    // 当前登录用户ID（未登录时使用 GUEST_USER_ID）
+    private var currentUserId: String = GUEST_USER_ID
 
     /**
      * 设置当前用户ID
@@ -101,6 +105,15 @@ class MainRepository(private val context: Context) {
     suspend fun togglePinConversation(conversationId: String, isPinned: Boolean) {
         withContext(Dispatchers.IO) {
             historyModel.togglePinConversation(conversationId, isPinned)
+        }
+    }
+
+    /**
+     * 删除指定用户的所有对话（用于清理未登录用户的临时数据）
+     */
+    suspend fun deleteConversationsByUserId(userId: String) {
+        withContext(Dispatchers.IO) {
+            historyModel.deleteConversationsByUserId(userId)
         }
     }
 }

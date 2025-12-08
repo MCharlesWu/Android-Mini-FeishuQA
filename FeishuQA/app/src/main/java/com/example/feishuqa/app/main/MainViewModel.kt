@@ -35,7 +35,7 @@ class MainViewModel(private val context: Context) : ViewModel() {
 
     init {
         refreshLoginState()
-        loadConversations()
+        // refreshLoginState 内部已经调用了 loadConversations()，这里不需要重复调用
     }
 
     /**
@@ -52,22 +52,37 @@ class MainViewModel(private val context: Context) : ViewModel() {
             userId = userId
         )
         
-        // 如果已登录，设置用户ID给repository
+        // 根据登录状态设置用户ID给repository
         if (isLoggedIn && userId != null) {
             repository.setUserId(userId)
+        } else {
+            // 未登录时使用 guest 用户ID
+            repository.setUserId(MainRepository.GUEST_USER_ID)
         }
+        
+        // 刷新对话列表
+        loadConversations()
     }
 
     /**
      * 退出登录
      */
     fun logout() {
+        // 退出登录前，删除所有 guest 用户的临时对话
+        viewModelScope.launch {
+            repository.deleteConversationsByUserId(MainRepository.GUEST_USER_ID)
+        }
+        
         SessionManager.clearSession(context)
         _uiState.value = _uiState.value.copy(
             isLoggedIn = false,
             userName = null,
             userId = null
         )
+        
+        // 切换到 guest 用户并刷新列表
+        repository.setUserId(MainRepository.GUEST_USER_ID)
+        loadConversations()
     }
 
     /**
@@ -251,6 +266,19 @@ class MainViewModel(private val context: Context) : ViewModel() {
                 loadConversations() // 重新加载列表
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
+
+    /**
+     * 删除所有 guest 用户的临时对话（用于应用关闭时清理）
+     */
+    fun deleteGuestConversations() {
+        viewModelScope.launch {
+            try {
+                repository.deleteConversationsByUserId(MainRepository.GUEST_USER_ID)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }

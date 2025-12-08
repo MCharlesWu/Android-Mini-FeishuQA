@@ -14,6 +14,7 @@ import com.example.feishuqa.app.main.MainView
 import com.example.feishuqa.app.main.MainViewModel
 import com.example.feishuqa.app.main.MainViewModelFactory
 import com.example.feishuqa.common.utils.SessionManager
+import com.example.feishuqa.data.repository.MainRepository
 import com.example.feishuqa.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 
@@ -163,5 +164,18 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.refreshLoginState()
+    }
+
+    /**
+     * 当Activity销毁时，如果未登录，清理所有 guest 用户的临时对话数据
+     */
+    override fun onDestroy() {
+        super.onDestroy()
+        // 如果未登录，删除所有 guest 用户的对话
+        if (!SessionManager.isLoggedIn(this)) {
+            lifecycleScope.launch {
+                viewModel.deleteGuestConversations()
+            }
+        }
     }
 }

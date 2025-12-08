@@ -12,6 +12,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 /**
  * 历史对话列表的 UI 状态
@@ -251,6 +252,55 @@ class HistoryModel(private val context: Context) {
             index.isDeleted = true
             // 同时更新时间戳
             index.updateTime = System.currentTimeMillis()
+        }
+    }
+
+    /**
+     * 删除指定用户的所有对话（包括索引、详情文件和消息文件）
+     * 用于清理未登录用户的临时对话数据
+     * @param userId 要删除的用户ID（例如 "guest"）
+     */
+    fun deleteConversationsByUserId(userId: String) {
+        try {
+            // 1. 读取索引文件，找到所有该用户的对话
+            val jsonString = JsonUtils.readJsonFromFiles(context, INDEX_FILE_PATH)
+            if (jsonString.isBlank() || jsonString == "[]") {
+                return // 没有数据，直接返回
+            }
+
+            val indexFile = jsonFormatter.decodeFromString<ConversationIndexFile>(jsonString)
+            val conversationsToDelete = indexFile.conversations.filter { it.userId == userId }
+
+            if (conversationsToDelete.isEmpty()) {
+                return // 没有该用户的对话，直接返回
+            }
+
+            // 2. 删除每个对话的相关文件
+            conversationsToDelete.forEach { index ->
+                // 删除详情文件
+                JsonUtils.deleteJSONFile(context, index.dataFile)
+
+                // 删除消息目录下的所有文件
+                val messageDir = File(context.filesDir, index.messageDir)
+                if (messageDir.exists() && messageDir.isDirectory) {
+                    messageDir.listFiles()?.forEach { file ->
+                        file.delete()
+                    }
+                    messageDir.delete() // 删除空目录
+                }
+            }
+
+            // 3. 从索引文件中移除这些对话
+            val remainingConversations = indexFile.conversations.filter { it.userId != userId }.toMutableList()
+            val updatedIndexFile = indexFile.copy(
+                conversations = remainingConversations,
+                lastUpdateTime = System.currentTimeMillis()
+            )
+
+            // 4. 保存更新后的索引文件
+            saveObjectToJsonFile(INDEX_FILE_PATH, updatedIndexFile)
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
