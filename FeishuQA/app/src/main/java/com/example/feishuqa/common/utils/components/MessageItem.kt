@@ -32,11 +32,21 @@ import com.example.feishuqa.data.entity.Message
 import com.example.feishuqa.data.entity.MessageStatus
 
 @Composable
-fun MessageItem(message: Message) {
+fun MessageItem(
+    message: Message,
+    onRegenerate: () -> Unit = {},
+    enableTypingEffect: Boolean = false,
+    typingSpeed: Long = 50L
+) {
     if (message.isUser()) {
         UserMessageItem(message)
     } else {
-        AiMessageItem(message)
+        AiMessageItem(
+            message = message,
+            onRegenerate = onRegenerate,
+            enableTypingEffect = enableTypingEffect,
+            typingSpeed = typingSpeed
+        )
     }
 }
 
@@ -76,7 +86,12 @@ fun UserMessageItem(message: Message) {
 }
 
 @Composable
-fun AiMessageItem(message: Message) {
+fun AiMessageItem(
+    message: Message,
+    onRegenerate: () -> Unit = {},
+    enableTypingEffect: Boolean = false,
+    typingSpeed: Long = 50L
+) {
     val clipboardManager = LocalClipboardManager.current
     var expandedThinking by remember { mutableStateOf(false) }
 
@@ -145,7 +160,17 @@ fun AiMessageItem(message: Message) {
 
         // 消息正文 (无背景气泡)
         SelectionContainer {
-            MarkdownTextMock(content = message.content)
+            if (enableTypingEffect && message.status == MessageStatus.TYPING) {
+                TypingMarkdownText(
+                    text = message.content,
+                    typingSpeed = typingSpeed,
+                    onTypingComplete = {
+                        // 打字完成回调
+                    }
+                )
+            } else {
+                MarkdownTextMock(content = message.content)
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -164,7 +189,9 @@ fun AiMessageItem(message: Message) {
                 Spacer(modifier = Modifier.width(16.dp))
                 ActionIcon(Icons.Outlined.ThumbDown, "点踩") {}
                 Spacer(modifier = Modifier.width(16.dp))
-                ActionIcon(Icons.Outlined.Refresh, "重新生成") {}
+                ActionIcon(Icons.Outlined.Refresh, "重新生成") {
+                    onRegenerate()
+                }
                 Spacer(modifier = Modifier.weight(1f))
                 ActionIcon(Icons.Outlined.Share, "分享") {}
             }

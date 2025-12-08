@@ -45,8 +45,9 @@ fun ChatInputBar(
     onWebSearchToggle: (Boolean) -> Unit = {},
     onModelSelect: () -> Unit = {},
     onSendText: (String) -> Unit,
-    onAttachClick: () -> Unit,
-    onVoiceClick: () -> Unit,
+    onAttachClick: () -> Unit = {},
+    onVoiceClick: () -> Unit = {},
+    isTyping: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var text by remember { mutableStateOf("") }

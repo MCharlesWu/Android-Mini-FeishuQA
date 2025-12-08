@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- KIMI风格用户气泡 - 蓝色渐变 -->
+    <gradient
+        android:startColor="#3370FF"
+        android:endColor="#1A56DB"
+        android:angle="135"/>
+    
+    <!-- 圆角设计 -->
+    <corners
+        android:topLeftRadius="18dp"
+        android:topRightRadius="4dp"
+        android:bottomLeftRadius="18dp"
+        android:bottomRightRadius="18dp"/>
+    
+    <!-- 内边距 -->
+    <padding
+        android:left="12dp"
+        android:right="12dp"
+        android:top="8dp"
+        android:bottom="8dp"/>
+</shape>

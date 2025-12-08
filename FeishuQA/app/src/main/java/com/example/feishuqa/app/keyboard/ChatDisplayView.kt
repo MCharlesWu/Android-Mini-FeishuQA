@@ -28,7 +28,7 @@ class ChatDisplayView @JvmOverloads constructor(
     }
 
     private fun setupRecyclerView() {
-        adapter = ChatAdapter { model -> onImageClick?.invoke(model) }
+        adapter = ChatAdapter(context) { model -> onImageClick?.invoke(model) }
         val layoutManager = LinearLayoutManager(context)
         layoutManager.stackFromEnd = true
         rvChat.layoutManager = layoutManager

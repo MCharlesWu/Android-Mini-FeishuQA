@@ -163,6 +163,9 @@ class MainViewModel(private val context: Context) : ViewModel() {
         viewModelScope.launch {
             val result = repository.createConversation(title)
             result.onSuccess { conversationId ->
+                // 设置当前选中的对话ID
+                _uiState.value = _uiState.value.copy(selectedConversationId = conversationId)
+                // 触发导航事件
                 _navigateToConversation.value = conversationId
                 loadConversations() // 刷新列表
             }.onFailure {
@@ -289,4 +292,3 @@ data class MainUiState(
         )
     }
 }
-

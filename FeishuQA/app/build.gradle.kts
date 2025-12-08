@@ -73,6 +73,12 @@ dependencies {
     implementation(files("libs/bdasr_V3_20250507_b610f20.jar"))
     // json工具
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+    // Markwon - Markdown解析库（只保留核心功能）
+    implementation("io.noties.markwon:core:4.6.2")
+    implementation("io.noties.markwon:ext-strikethrough:4.6.2")
+    implementation("io.noties.markwon:linkify:4.6.2")
+    // Markwon表格支持
+    implementation("io.noties.markwon:ext-tables:4.6.2")
     // 1. OkHttp: 用于发送网络请求
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // 2. Gson: 用于解析 JSON 数据

@@ -113,11 +113,35 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="新建对话"
                 android:scaleType="centerInside"
+                app:layout_constraintEnd_toStartOf="@id/btn_chat_activity"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <!-- 独立聊天页按钮 -->
+            <ImageButton
+                android:id="@+id/btn_chat_activity"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_chat"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="独立聊天页"
+                android:scaleType="centerInside"
                 app:layout_constraintEnd_toStartOf="@id/btn_menu"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- 聊天消息显示区域 -->
+        <com.example.feishuqa.app.keyboard.ChatDisplayView
+            android:id="@+id/chatDisplayView"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@id/top_bar"
+            app:layout_constraintBottom_toTopOf="@id/chatInputView"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
 
         <!-- 欢迎区域 - 居中显示 -->
         <LinearLayout
