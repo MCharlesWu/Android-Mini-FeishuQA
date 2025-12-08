@@ -7,6 +7,7 @@ import androidx.lifecycle.MutableLiveData
 import com.example.feishuqa.app.history.HistoryModel
 import com.example.feishuqa.common.utils.ImageUtils
 import com.example.feishuqa.common.utils.JsonUtils
+import com.example.feishuqa.common.utils.SessionManager
 import com.example.feishuqa.data.entity.Message
 import com.example.feishuqa.data.entity.MessageType
 import com.example.feishuqa.data.entity.MessageStatus
@@ -26,12 +27,22 @@ import kotlin.collections.find
 
 // 单例 Repository
 class ChatRepositoryExample private constructor(private val context: Context) {
+    
+    // 对话列表刷新回调接口
+    interface OnConversationRefreshListener {
+        fun onConversationListRefreshNeeded()
+    }
+    
+    private var refreshListener: OnConversationRefreshListener? = null
 
     private val _messages = MutableLiveData<MutableList<Message>>(mutableListOf())
     val messages: LiveData<MutableList<Message>> = _messages
     
     // 当前对话ID
     private var currentConversationId: String? = null
+    
+    // 当前用户ID（未登录时使用 guest）
+    private var currentUserId: String = MainRepository.GUEST_USER_ID
     
     // 使用 HistoryModel 统一管理消息存储（新结构）
     private val historyModel = HistoryModel(context)
@@ -63,17 +74,62 @@ class ChatRepositoryExample private constructor(private val context: Context) {
     }
     
     /**
+     * 设置当前用户ID
+     */
+    fun setCurrentUserId(userId: String) {
+        currentUserId = userId
+    }
+    
+    fun setOnConversationRefreshListener(listener: OnConversationRefreshListener?) {
+        refreshListener = listener
+    }
+    
+    /**
+     * 获取当前用户ID
+     */
+    private fun getCurrentUserId(): String {
+        return SessionManager.getUserId(context) ?: MainRepository.GUEST_USER_ID
+    }
+    
+    /**
      * 清除当前对话
      */
     fun clearCurrentConversation() {
         currentConversationId = null
         _messages.postValue(mutableListOf())
     }
+    
+    /**
+     * 自动创建新对话（当没有选中对话时）
+     * @param initialTitle 初始标题，默认为第一条消息内容
+     * @return 新创建的对话ID
+     */
+    private fun createNewConversation(initialTitle: String = "新对话"): String {
+        val userId = getCurrentUserId()
+        val conversationIndex = historyModel.createConversation(userId, initialTitle)
+        return conversationIndex.conversationId
+    }
 
     // 核心业务：发送消息（包含压缩、上传模拟、状态流转）
     fun sendMessage(text: String, uri: Uri?) {
         val msgId = UUID.randomUUID().toString()
-        val conversationId = currentConversationId ?: return
+        
+        // 自动创建新对话：如果没有选中对话，自动创建新对话 ★★★
+        var conversationId = currentConversationId
+        if (conversationId == null) {
+            // 使用消息内容作为初始标题，如果内容为空则使用默认标题
+            val initialTitle = if (text.isNotBlank()) {
+                if (text.length > 20) "${text.take(20)}..." else text
+            } else {
+                "新对话"
+            }
+            conversationId = createNewConversation(initialTitle)
+            currentConversationId = conversationId
+            // 加载新创建对话的历史消息（此时应该为空）
+            loadChatHistory()
+            // 通知需要刷新对话列表
+            refreshListener?.onConversationListRefreshNeeded()
+        }
 
         // 1. 立即展示 loading 状态
         val userMsg = Message(
@@ -176,9 +232,18 @@ class ChatRepositoryExample private constructor(private val context: Context) {
             val targetIndex = list.indexOfFirst { it.id == id }
             if (targetIndex != -1) {
                 val target = list[targetIndex]
-                val updatedMessage = target.copy(content = content)
-                list[targetIndex] = updatedMessage
-                _messages.value = list // 触发刷新
+                // 优化：只在内容真正变化时更新，避免不必要的刷新
+                if (target.content != content) {
+                    val updatedMessage = target.copy(content = content)
+                    list[targetIndex] = updatedMessage
+                    
+                    // 特殊处理：如果是表格内容，延迟更新以减少抖动
+                    if (content.contains("|") && content.contains("\n")) {
+                        kotlinx.coroutines.delay(50) // 表格内容延迟50ms更新
+                    }
+                    
+                    _messages.value = list // 触发刷新
+                }
             }
         }
     }
@@ -301,10 +366,35 @@ class ChatRepositoryExample private constructor(private val context: Context) {
         val fullResponse = mockAiResponse(userQuery)
         val stringBuilder = StringBuilder()
 
+        // 优化：减少更新频率，避免过于频繁的UI刷新
+        var lastEmitTime = System.currentTimeMillis()
+        val minEmitInterval = 50L // 最小发射间隔50ms
+        
+        // 特殊处理：检测是否包含表格，如果是则使用更长的间隔
+        val containsTable = fullResponse.contains("|") && fullResponse.contains("\n")
+        val tableEmitInterval = if (containsTable) 200L else minEmitInterval // 表格内容使用200ms间隔
+
         // 模拟逐字输出，速度随机变化
         for (char in fullResponse) {
             delay((20 + Math.random() * 40).toLong()) // 20-60ms随机延迟
             stringBuilder.append(char)
+            
+            val currentTime = System.currentTimeMillis()
+            val currentEmitInterval = if (stringBuilder.toString().contains("|") && stringBuilder.toString().contains("\n")) {
+                tableEmitInterval // 一旦开始表格内容，使用更长间隔
+            } else {
+                minEmitInterval
+            }
+            
+            // 只在间隔足够大时发射，避免过于频繁的更新
+            if (currentTime - lastEmitTime >= currentEmitInterval) {
+                emit(stringBuilder.toString())
+                lastEmitTime = currentTime
+            }
+        }
+        
+        // 确保最后的内容被发射
+        if (stringBuilder.isNotEmpty()) {
             emit(stringBuilder.toString())
         }
     }

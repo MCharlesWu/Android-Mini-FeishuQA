@@ -9,16 +9,19 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import android.os.Handler
+import android.os.Looper
 import com.example.feishuqa.R
-import com.example.feishuqa.app.keyboard.ChatAdapter
 
 class ChatDisplayView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
 ) : FrameLayout(context, attrs) {
 
-    private var rvChat: RecyclerView
+    private lateinit var rvChat: RecyclerView
     private lateinit var adapter: ChatAdapter
     private lateinit var viewModel: ChatDisplayViewModel
+    private val scrollHandler = Handler(Looper.getMainLooper())
+    private var pendingScrollPosition: Int = -1
     var onImageClick: ((Any) -> Unit)? = null
 
     init {
@@ -41,8 +44,65 @@ class ChatDisplayView @JvmOverloads constructor(
         viewModel = ViewModelProvider(owner, factory)[ChatDisplayViewModel::class.java]
 
         viewModel.messages.observe(owner) { list ->
+            val oldSize = adapter.itemCount
+            val newSize = list.size
+            
             adapter.submitList(ArrayList(list)) // 提交副本
-            if (list.isNotEmpty()) rvChat.post { rvChat.smoothScrollToPosition(list.size - 1) }
+            
+            // 优化滚动逻辑：只在必要时滚动，避免流式更新时的抖动
+            if (list.isNotEmpty()) {
+                rvChat.post {
+                    val layoutManager = rvChat.layoutManager as LinearLayoutManager
+                    val lastVisiblePosition = layoutManager.findLastVisibleItemPosition()
+                    val isNearBottom = lastVisiblePosition >= newSize - 2 // 判断是否接近底部
+                    
+                    when {
+                        // 如果是新消息且用户在底部附近，滚动到新消息
+                        newSize > oldSize && isNearBottom -> {
+                            scheduleScrollToPosition(newSize - 1, smooth = true)
+                        }
+                        // 如果是内容更新（流式回复），只在用户已经在底部时滚动
+                        newSize == oldSize && lastVisiblePosition == newSize - 1 -> {
+                            // 使用不带动画的滚动，避免抖动
+                            scheduleScrollToPosition(newSize - 1, smooth = false)
+                        }
+                        // 其他情况不自动滚动，让用户控制
+                    }
+                }
+            }
         }
+    }
+    
+    // 新增：防抖滚动机制（智能延迟，表格内容延长到150ms）
+    private fun scheduleScrollToPosition(position: Int, smooth: Boolean = false) {
+        // 取消之前的滚动任务
+        scrollHandler.removeCallbacksAndMessages(null)
+        pendingScrollPosition = position
+        
+        // 智能延迟：检测是否为表格内容
+        val delay = if ((rvChat.adapter as? ChatAdapter)?.isMessageContainsTable(position) == true) {
+            150L // 表格内容使用150ms延迟，给表格渲染更多时间
+        } else {
+            100L // 普通内容使用100ms延迟
+        }
+        
+        // 延迟执行滚动，避免过于频繁的更新
+        scrollHandler.postDelayed({
+            if (pendingScrollPosition == position) {
+                if (smooth) {
+                    rvChat.smoothScrollToPosition(position)
+                } else {
+                    val layoutManager = rvChat.layoutManager as LinearLayoutManager
+                    layoutManager.scrollToPosition(position)
+                }
+                pendingScrollPosition = -1
+            }
+        }, delay)
+    }
+    
+    // 新增：清理资源
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        scrollHandler.removeCallbacksAndMessages(null)
     }
 }
