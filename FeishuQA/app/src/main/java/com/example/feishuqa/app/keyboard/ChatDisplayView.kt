@@ -134,6 +134,23 @@ class ChatDisplayView @JvmOverloads constructor(
         }
     }
     
+    // 新增：强制滚动到底部（忽略内部智能滚动逻辑）
+    fun forceScrollToBottom(smooth: Boolean = true) {
+        val itemCount = adapter.itemCount
+        if (itemCount > 0) {
+            // 取消所有待处理的滚动任务
+            scrollHandler.removeCallbacksAndMessages(null)
+            pendingScrollPosition = -1
+            
+            if (smooth) {
+                rvChat.smoothScrollToPosition(itemCount - 1)
+            } else {
+                val layoutManager = rvChat.layoutManager as LinearLayoutManager
+                layoutManager.scrollToPosition(itemCount - 1)
+            }
+        }
+    }
+    
     // 新增：清理资源
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
