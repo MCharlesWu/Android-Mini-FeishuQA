@@ -176,7 +176,7 @@ object JsonUtils
     }
 
     /**
-     * 删除对话文件
+     * 删除JSON文件
      *
      * @param context 上下文
      * @param fileName 文件名
