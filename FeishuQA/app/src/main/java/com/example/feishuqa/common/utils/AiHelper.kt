@@ -53,11 +53,11 @@ object AiHelper {
 
     /**
      * 根据 AIModel 的 id 获取对应的 AiType
-     * 目前支持 deepseek-r1 和 doubao，其他模型返回 null（预留接口）
+     * 目前支持 deepseek-v3 和 doubao，其他模型返回 null（预留接口）
      */
     fun getAiTypeFromModelId(modelId: String): AiType? {
         return when (modelId) {
-            "deepseek-r1" -> AiType.DEEPSEEK
+            "deepseek-v3" -> AiType.DEEPSEEK
             "doubao" -> AiType.DOUBAO
             // 以下模型预留接口，暂不支持
             "gpt-4" -> null
@@ -79,8 +79,9 @@ object AiHelper {
      * @param model AI模型实体
      * @param question 用户问题
      * @return 如果模型不支持，返回失败结果
+     * 注意：调用方需确保在 IO 线程中调用，因为会执行阻塞网络请求
      */
-    suspend fun chatWithModel(model: AIModel, question: String): Result<String> {
+    fun chatWithModel(model: AIModel, question: String): Result<String> {
         val aiType = getAiTypeFromModelId(model.id)
         return if (aiType != null) {
             chat(aiType, question)

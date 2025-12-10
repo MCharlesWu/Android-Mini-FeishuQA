@@ -19,8 +19,8 @@ import com.example.feishuqa.app.keyboard.ChatViewModelFactory
 import com.example.feishuqa.app.login.LoginActivity
 import com.example.feishuqa.app.main.MainView
 import com.example.feishuqa.app.main.MainViewModel
-import com.example.feishuqa.app.main.MainViewModelFactory
 import com.example.feishuqa.common.utils.SessionManager
+import com.example.feishuqa.common.utils.viewModelFactory
 import com.example.feishuqa.data.entity.AIModels
 import com.example.feishuqa.data.repository.ChatRepositoryExample
 import com.example.feishuqa.data.repository.MainRepository
@@ -58,8 +58,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 初始化 MainViewModel
-        viewModel = ViewModelProvider(this, MainViewModelFactory(this))[MainViewModel::class.java]
+        // 初始化 MainViewModel - 使用 application 而非 this，避免内存泄漏
+        viewModel = ViewModelProvider(this, application.viewModelFactory(::MainViewModel))[MainViewModel::class.java]
 
         // 配置 ChatRepository
         setupChatRepository()

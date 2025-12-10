@@ -1,23 +1,26 @@
 package com.example.feishuqa.app.register
 
-import android.content.Context
+import android.app.Application
 import android.util.Log
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.feishuqa.data.entity.User
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 注册界面ViewModel
  * ViewModel层：处理注册业务逻辑
+ * 使用 AndroidViewModel 获取 Application Context，避免内存泄漏
  */
-class RegisterViewModel(private val context: Context) : ViewModel() {
+class RegisterViewModel(application: Application) : AndroidViewModel(application) {
 
-    // LogicModel层
-    private val model = RegisterModel(context)
+    // LogicModel层 - 使用 Application Context
+    private val model = RegisterModel(application.applicationContext)
 
     // UI状态
     private val _uiState = MutableStateFlow(RegisterUiState())
@@ -107,18 +110,27 @@ class RegisterViewModel(private val context: Context) : ViewModel() {
             return
         }
 
-        viewModelScope.launch {
-            _uiState.value = currentState.copy(isLoading = true, error = null, dialogError = null)
+        // 在 IO 线程执行注册操作
+        viewModelScope.launch(Dispatchers.IO) {
+            // 更新 UI 状态需要切回主线程
+            withContext(Dispatchers.Main) {
+                _uiState.value = currentState.copy(isLoading = true, error = null, dialogError = null)
+            }
+            
             val result = model.register(currentState.account, currentState.password)
             Log.d("testRegister", "result = $result")
-            result.onSuccess { user ->
-                _uiState.value = currentState.copy(isLoading = false)
-                _registerSuccess.value = user
-            }.onFailure { exception ->
-                _uiState.value = currentState.copy(
-                    isLoading = false,
-                    dialogError = exception.message ?: "注册失败"
-                )
+            
+            // 更新 UI 状态切回主线程
+            withContext(Dispatchers.Main) {
+                result.onSuccess { user ->
+                    _uiState.value = currentState.copy(isLoading = false)
+                    _registerSuccess.value = user
+                }.onFailure { exception ->
+                    _uiState.value = currentState.copy(
+                        isLoading = false,
+                        dialogError = exception.message ?: "注册失败"
+                    )
+                }
             }
         }
     }
@@ -220,6 +232,3 @@ data class RegisterUiState(
     val passwordError: Boolean = false, // 密码字段是否有错误（高亮）
     val confirmPasswordError: Boolean = false // 确认密码字段是否有错误（高亮）
 )
-
-
-

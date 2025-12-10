@@ -16,8 +16,8 @@ data class AIModel(
 object AIModels {
     val defaultModels = listOf(
         AIModel(
-            id = "deepseek-r1",
-            name = "DeepSeek R1",
+            id = "deepseek-v3",
+            name = "DeepSeek V3",
             description = "深度思考，推理能力强"
         ),
         AIModel(

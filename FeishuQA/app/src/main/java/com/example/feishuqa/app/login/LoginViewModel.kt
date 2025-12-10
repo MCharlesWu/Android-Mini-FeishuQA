@@ -1,25 +1,27 @@
 package com.example.feishuqa.app.login
 
-import android.content.Context
+import android.app.Application
 import android.util.Log
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.feishuqa.data.entity.User
-import com.example.feishuqa.data.repository.AuthRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 登录界面ViewModel
  * ViewModel层：处理登录业务逻辑
+ * 使用 AndroidViewModel 获取 Application Context，避免内存泄漏
  */
-class LoginViewModel(private val context: Context) : ViewModel()
+class LoginViewModel(application: Application) : AndroidViewModel(application)
 {
 
-    // LogicModel层
-    private val model = LoginModel(context)
+    // LogicModel层 - 使用 Application Context
+    private val model = LoginModel(application.applicationContext)
 
 
     // UI状态
@@ -81,18 +83,27 @@ class LoginViewModel(private val context: Context) : ViewModel()
             return
         }
 
-        viewModelScope.launch {
-            _uiState.value = currentState.copy(isLoading = true, error = null, dialogError = null)
+        // 在 IO 线程执行登录操作
+        viewModelScope.launch(Dispatchers.IO) {
+            // 更新 UI 状态需要切回主线程
+            withContext(Dispatchers.Main) {
+                _uiState.value = currentState.copy(isLoading = true, error = null, dialogError = null)
+            }
+            
             val result = model.login(currentState.username, currentState.password)
             Log.d("testLogin", "result = $result")
-            result.onSuccess { user ->
-                _uiState.value = currentState.copy(isLoading = false)
-                _loginSuccess.value = user
-            }.onFailure { exception ->
-                _uiState.value = currentState.copy(
-                    isLoading = false,
-                    dialogError = exception.message ?: "登录失败"
-                )
+            
+            // 更新 UI 状态切回主线程
+            withContext(Dispatchers.Main) {
+                result.onSuccess { user ->
+                    _uiState.value = currentState.copy(isLoading = false)
+                    _loginSuccess.value = user
+                }.onFailure { exception ->
+                    _uiState.value = currentState.copy(
+                        isLoading = false,
+                        dialogError = exception.message ?: "登录失败"
+                    )
+                }
             }
         }
     }

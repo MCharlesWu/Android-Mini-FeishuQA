@@ -1,7 +1,7 @@
 package com.example.feishuqa.app.main
 
-import android.content.Context
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.feishuqa.common.utils.AiHelper
 import com.example.feishuqa.common.utils.SessionManager
@@ -10,18 +10,23 @@ import com.example.feishuqa.data.entity.AIModels
 import com.example.feishuqa.data.entity.Conversation
 import com.example.feishuqa.data.repository.ChatRepositoryExample
 import com.example.feishuqa.data.repository.MainRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 主界面ViewModel
  * ViewModel层：处理业务逻辑，管理UI状态
+ * 使用 AndroidViewModel 获取 Application Context，避免内存泄漏
  */
-class MainViewModel(private val context: Context) : ViewModel() {
+class MainViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = MainRepository(context)
+    // 使用 Application Context，避免内存泄漏
+    private val appContext = application.applicationContext
+    private val repository = MainRepository(appContext)
 
     // UI状态
     private val _uiState = MutableStateFlow(MainUiState())
@@ -44,9 +49,9 @@ class MainViewModel(private val context: Context) : ViewModel() {
      * 刷新登录状态
      */
     fun refreshLoginState() {
-        val isLoggedIn = SessionManager.isLoggedIn(context)
-        val userName = SessionManager.getUserName(context)
-        val userId = SessionManager.getUserId(context)
+        val isLoggedIn = SessionManager.isLoggedIn(appContext)
+        val userName = SessionManager.getUserName(appContext)
+        val userId = SessionManager.getUserId(appContext)
         
         _uiState.value = _uiState.value.copy(
             isLoggedIn = isLoggedIn,
@@ -71,20 +76,24 @@ class MainViewModel(private val context: Context) : ViewModel() {
      */
     fun logout() {
         // 退出登录前，删除所有 guest 用户的临时对话
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.deleteConversationsByUserId(MainRepository.GUEST_USER_ID)
+            
+            withContext(Dispatchers.Main) {
+                SessionManager.clearSession(appContext)
+                _uiState.value = _uiState.value.copy(
+                    isLoggedIn = false,
+                    userName = null,
+                    userId = null
+                )
+                
+                // 切换到 guest 用户并刷新列表
+                repository.setUserId(MainRepository.GUEST_USER_ID)
+            }
+            
+            // 重新加载对话列表（在 IO 线程）
+            loadConversationsInternal()
         }
-        
-        SessionManager.clearSession(context)
-        _uiState.value = _uiState.value.copy(
-            isLoggedIn = false,
-            userName = null,
-            userId = null
-        )
-        
-        // 切换到 guest 用户并刷新列表
-        repository.setUserId(MainRepository.GUEST_USER_ID)
-        loadConversations()
     }
 
     /**
@@ -92,7 +101,7 @@ class MainViewModel(private val context: Context) : ViewModel() {
      * @return true表示已登录，false表示未登录
      */
     fun checkLoginRequired(): Boolean {
-        if (!SessionManager.isLoggedIn(context)) {
+        if (!SessionManager.isLoggedIn(appContext)) {
             _requireLogin.value = true
             return false
         }
@@ -119,17 +128,32 @@ class MainViewModel(private val context: Context) : ViewModel() {
      * 注意：现在历史对话列表由 HistoryViewModel 管理，这个方法主要用于计算知识点数量
      */
     fun loadConversations() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
+            loadConversationsInternal()
+        }
+    }
+
+    /**
+     * 内部加载对话列表方法（需要在 IO 线程调用）
+     */
+    private suspend fun loadConversationsInternal() {
+        withContext(Dispatchers.Main) {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            try {
-                val conversations = repository.getConversations()
-                // 计算知识点数量（基于加载到的对话列表）
-                val knowledgePoints = calculateKnowledgePointsFromList(conversations)
+        }
+        
+        try {
+            val conversations = repository.getConversations()
+            // 计算知识点数量（基于加载到的对话列表）
+            val knowledgePoints = calculateKnowledgePointsFromList(conversations)
+            
+            withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(
                     knowledgePointCount = knowledgePoints,
                     isLoading = false
                 )
-            } catch (e: Exception) {
+            }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = e.message
@@ -161,14 +185,14 @@ class MainViewModel(private val context: Context) : ViewModel() {
     fun selectModel(model: AIModel) {
         _uiState.value = _uiState.value.copy(selectedModel = model)
         // 同步更新 ChatRepositoryExample 中的模型
-        ChatRepositoryExample.getInstance(context).setCurrentModel(model)
+        ChatRepositoryExample.getInstance(appContext).setCurrentModel(model)
     }
 
     /**
      * 发送消息
      */
     fun sendMessage(text: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             // TODO: 实际发送消息到API
             // 这里可以调用Repository发送消息
         }
@@ -183,17 +207,22 @@ class MainViewModel(private val context: Context) : ViewModel() {
             return
         }
         
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val result = repository.createConversation(title)
-            result.onSuccess { conversationId ->
-                // 设置当前选中的对话ID
-                _uiState.value = _uiState.value.copy(selectedConversationId = conversationId)
-                // 触发导航事件
-                _navigateToConversation.value = conversationId
-                loadConversations() // 刷新列表
-            }.onFailure {
-                _uiState.value = _uiState.value.copy(error = it.message)
+            
+            withContext(Dispatchers.Main) {
+                result.onSuccess { conversationId ->
+                    // 设置当前选中的对话ID
+                    _uiState.value = _uiState.value.copy(selectedConversationId = conversationId)
+                    // 触发导航事件
+                    _navigateToConversation.value = conversationId
+                }.onFailure {
+                    _uiState.value = _uiState.value.copy(error = it.message)
+                }
             }
+            
+            // 刷新列表（在 IO 线程）
+            loadConversationsInternal()
         }
     }
 
@@ -266,7 +295,7 @@ class MainViewModel(private val context: Context) : ViewModel() {
      * 删除所有 guest 用户的临时对话（用于应用关闭时清理）
      */
     fun deleteGuestConversations() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 repository.deleteConversationsByUserId(MainRepository.GUEST_USER_ID)
             } catch (e: Exception) {
@@ -311,8 +340,10 @@ class MainViewModel(private val context: Context) : ViewModel() {
             return
         }
 
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoadingRecommendations = true)
+        viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.Main) {
+                _uiState.value = _uiState.value.copy(isLoadingRecommendations = true)
+            }
 
             try {
                 // 获取最近10条对话标题
@@ -326,11 +357,13 @@ class MainViewModel(private val context: Context) : ViewModel() {
                 
                 if (conversations.isEmpty()) {
                     // 没有历史记录，使用默认推荐
-                    _uiState.value = _uiState.value.copy(
-                        recommendedTopics = getDefaultRecommendations(),
-                        knowledgePointCount = knowledgePoints,
-                        isLoadingRecommendations = false
-                    )
+                    withContext(Dispatchers.Main) {
+                        _uiState.value = _uiState.value.copy(
+                            recommendedTopics = getDefaultRecommendations(),
+                            knowledgePointCount = knowledgePoints,
+                            isLoadingRecommendations = false
+                        )
+                    }
                     return@launch
                 }
 
@@ -363,18 +396,24 @@ $historyTitles
                     getDefaultRecommendations()
                 }
 
-                _uiState.value = _uiState.value.copy(
-                    recommendedTopics = topics,
-                    knowledgePointCount = knowledgePoints,
-                    isLoadingRecommendations = false
-                )
+                withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(
+                        recommendedTopics = topics,
+                        knowledgePointCount = knowledgePoints,
+                        isLoadingRecommendations = false
+                    )
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
-                _uiState.value = _uiState.value.copy(
-                    recommendedTopics = getDefaultRecommendations(),
-                    knowledgePointCount = calculateKnowledgePoints(),
-                    isLoadingRecommendations = false
-                )
+                val knowledgePoints = try { calculateKnowledgePoints() } catch (ex: Exception) { 0 }
+                
+                withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(
+                        recommendedTopics = getDefaultRecommendations(),
+                        knowledgePointCount = knowledgePoints,
+                        isLoadingRecommendations = false
+                    )
+                }
             }
         }
     }

@@ -3,7 +3,7 @@ package com.example.feishuqa.app.login
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
-import com.example.feishuqa.app.login.LoginViewModelFactory
+import com.example.feishuqa.common.utils.viewModelFactory
 import com.example.feishuqa.databinding.ActivityLoginBinding
 
 /**
@@ -23,8 +23,8 @@ class LoginActivity : AppCompatActivity() {
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 创建ViewModel
-        viewModel = ViewModelProvider(this, LoginViewModelFactory(this))[LoginViewModel::class.java]
+        // 创建ViewModel - 使用 application 而非 this，避免内存泄漏
+        viewModel = ViewModelProvider(this, application.viewModelFactory(::LoginViewModel))[LoginViewModel::class.java]
 
         // 创建View并初始化
         loginView = LoginView(this, binding, viewModel, this)

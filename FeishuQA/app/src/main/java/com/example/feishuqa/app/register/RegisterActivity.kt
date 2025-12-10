@@ -3,7 +3,7 @@ package com.example.feishuqa.app.register
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
-import com.example.feishuqa.app.register.RegisterViewModelFactory
+import com.example.feishuqa.common.utils.viewModelFactory
 import com.example.feishuqa.databinding.ActivityRegisterBinding
 
 /**
@@ -23,8 +23,8 @@ class RegisterActivity : AppCompatActivity() {
         binding = ActivityRegisterBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 创建ViewModel
-        viewModel = ViewModelProvider(this, RegisterViewModelFactory(this))[RegisterViewModel::class.java]
+        // 创建ViewModel - 使用 application 而非 this，避免内存泄漏
+        viewModel = ViewModelProvider(this, application.viewModelFactory(::RegisterViewModel))[RegisterViewModel::class.java]
 
         // 创建View并初始化
         registerView = RegisterView(this, binding, viewModel, this)
