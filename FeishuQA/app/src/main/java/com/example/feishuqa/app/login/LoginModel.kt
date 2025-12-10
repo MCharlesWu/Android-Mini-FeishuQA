@@ -16,6 +16,7 @@ class LoginModel(private val context: Context)
 
     /**
      * 加载 assets 下的 user.json
+     * 暂时不用
      */
     fun loadUsers(context: Context): List<User>
     {
