@@ -13,6 +13,37 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
+ * 历史对话列表的 UI 状态
+ */
+data class HistoryUiState(
+    val conversations: List<Conversation> = emptyList(),
+    val isLoading: Boolean = false,
+    val searchQuery: String = "",
+    val selectedConversationId: String? = null,
+    val error: String? = null
+) {
+    /**
+     * 获取过滤后的对话列表（根据搜索关键词和置顶状态排序）
+     */
+    fun getFilteredConversations(): List<Conversation> {
+        val filtered = if (searchQuery.isBlank()) {
+            conversations
+        } else {
+            conversations.filter {
+                it.title.contains(searchQuery, ignoreCase = true) ||
+                it.lastMessage?.contains(searchQuery, ignoreCase = true) == true
+            }
+        }
+        
+        // 置顶的排在前面，然后按时间倒序
+        return filtered.sortedWith(
+            compareByDescending<Conversation> { it.isPinned }
+                .thenByDescending { it.lastMessageTime }
+        )
+    }
+}
+
+/**
  * 历史对话 ViewModel
  * 使用新的索引文件结构，通过 HistoryModel 访问数据
  * 使用 StateFlow 管理 UI 状态（StateFlow 可以同时用于 Compose 和 XML UI）
