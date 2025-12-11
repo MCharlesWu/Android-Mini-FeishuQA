@@ -22,7 +22,7 @@ import com.example.feishuqa.app.main.MainViewModel
 import com.example.feishuqa.common.utils.SessionManager
 import com.example.feishuqa.common.utils.viewModelFactory
 import com.example.feishuqa.data.entity.AIModels
-import com.example.feishuqa.data.repository.ChatRepositoryExample
+import com.example.feishuqa.data.repository.ChatRepository
 import com.example.feishuqa.data.repository.MainRepository
 import com.example.feishuqa.databinding.ActivityMainBinding
 import com.example.feishuqa.databinding.LayoutDrawerBinding
@@ -40,7 +40,7 @@ class MainActivity : AppCompatActivity() {
 
     // 初始化 Repository 和 Factory
     private val chatViewModelFactory by lazy {
-        ChatViewModelFactory(ChatRepositoryExample.getInstance(applicationContext))
+        ChatViewModelFactory(ChatRepository.getInstance(applicationContext))
     }
 
     // 权限请求
@@ -80,7 +80,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupChatRepository() {
-        val chatRepository = ChatRepositoryExample.getInstance(applicationContext)
+        val chatRepository = ChatRepository.getInstance(applicationContext)
         val userId = if (SessionManager.isLoggedIn(this)) {
             SessionManager.getUserId(this) ?: MainRepository.GUEST_USER_ID
         } else {
@@ -89,7 +89,7 @@ class MainActivity : AppCompatActivity() {
         chatRepository.setCurrentUserId(userId)
         chatRepository.setCurrentModel(AIModels.defaultModel)
 
-        chatRepository.setOnConversationRefreshListener(object : ChatRepositoryExample.OnConversationRefreshListener {
+        chatRepository.setOnConversationRefreshListener(object : ChatRepository.OnConversationRefreshListener {
             override fun onConversationListRefreshNeeded() {
                 viewModel.loadConversations()
             }
@@ -135,8 +135,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         // 监听消息发送与滚动逻辑
-        val chatRepository = ChatRepositoryExample.getInstance(applicationContext)
-        chatRepository.setOnMessageSendListener(object : ChatRepositoryExample.OnMessageSendListener {
+        val chatRepository = ChatRepository.getInstance(applicationContext)
+        chatRepository.setOnMessageSendListener(object : ChatRepository.OnMessageSendListener {
             override fun onMessageSend() {
                 binding.chatDisplayView.scrollToBottom(smooth = true)
             }

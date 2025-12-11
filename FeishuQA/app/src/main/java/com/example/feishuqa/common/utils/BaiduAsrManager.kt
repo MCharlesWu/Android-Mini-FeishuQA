@@ -34,9 +34,6 @@ class BaiduAsrManager(context: Context, private val listener: AsrListener) : Eve
         // 1. 开启 DNN 模型 (智能静音检测)
         params[SpeechConstant.VAD] = SpeechConstant.VAD_DNN
 
-        // 2. 设置静音超时时间 (单位毫秒)
-        // 意思是：如果检测到 800ms 没说话，SDK 就会自动断句（回调 onFinish）
-        // 这个值你可以调：短了反应快但容易切断思考，长了反应慢
         params[SpeechConstant.VAD_ENDPOINT_TIMEOUT] = 800
 
         val json = JSONObject(params).toString()
@@ -69,16 +66,13 @@ class BaiduAsrManager(context: Context, private val listener: AsrListener) : Eve
                     if (results != null && results.length() > 0) {
                         val text = results.getString(0)
                         if ("final_result" == resultType) {
-                            // 最终结果（带标点，带最后一个字）
                             listener.onFinalResult(text)
                         } else if ("partial_result" == resultType) {
-                            // 临时结果
                             listener.onPartialResult(text)
                         }
                     }
                 }
                 SpeechConstant.CALLBACK_EVENT_ASR_FINISH -> {
-                    // 【核心】SDK 告诉我它彻底干完活了
                     listener.onFinish()
                 }
                 SpeechConstant.CALLBACK_EVENT_ASR_VOLUME -> {

@@ -227,7 +227,6 @@ class MainView(
     }
 
     private fun onRecommendationClick(content: String) {
-        // ★★★ 核心修改：调用封装方法设置文本并弹起键盘 ★★★
         chatInputView.setInputTextAndFocus(content)
     }
 
@@ -240,7 +239,6 @@ class MainView(
         val radioGroup = dialogView.findViewById<RadioGroup>(R.id.rg_models)
         val currentModel = viewModel.uiState.value.selectedModel
 
-        // 对应 ID 映射 (确保 ID 存在于你的 dialog_model_selector.xml 中)
         val modelIdMap = mapOf(
             "deepseek-v3" to R.id.rb_deepseek,
             "gpt-4" to R.id.rb_gpt4,
