@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.feishuqa.common.utils.FuzzyMatcher
 import com.example.feishuqa.data.entity.Conversation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,22 +25,33 @@ data class HistoryUiState(
 ) {
     /**
      * 获取过滤后的对话列表（根据搜索关键词和置顶状态排序）
+     * 使用模糊匹配算法对标题进行搜索
      */
     fun getFilteredConversations(): List<Conversation> {
         val filtered = if (searchQuery.isBlank()) {
             conversations
         } else {
-            conversations.filter {
-                it.title.contains(searchQuery, ignoreCase = true) ||
-                it.lastMessage?.contains(searchQuery, ignoreCase = true) == true
+            // 使用模糊匹配算法搜索标题
+            conversations.filter { conversation ->
+                FuzzyMatcher.isFuzzyMatch(conversation.title, searchQuery)
             }
         }
         
-        // 置顶的排在前面，然后按时间倒序
-        return filtered.sortedWith(
-            compareByDescending<Conversation> { it.isPinned }
-                .thenByDescending { it.lastMessageTime }
-        )
+        // 如果有搜索关键词，按相似度排序（相似度高的排在前面）
+        // 然后按置顶状态和时间倒序排序
+        return if (searchQuery.isNotBlank()) {
+            filtered.sortedWith(
+                compareByDescending<Conversation> { it.isPinned }
+                    .thenByDescending { FuzzyMatcher.getSimilarity(it.title, searchQuery) }
+                    .thenByDescending { it.lastMessageTime }
+            )
+        } else {
+            // 没有搜索关键词时，只按置顶和时间排序
+            filtered.sortedWith(
+                compareByDescending<Conversation> { it.isPinned }
+                    .thenByDescending { it.lastMessageTime }
+            )
+        }
     }
 }
 
