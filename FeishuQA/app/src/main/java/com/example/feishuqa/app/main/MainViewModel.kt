@@ -8,7 +8,7 @@ import com.example.feishuqa.common.utils.SessionManager
 import com.example.feishuqa.data.entity.AIModel
 import com.example.feishuqa.data.entity.AIModels
 import com.example.feishuqa.data.entity.Conversation
-import com.example.feishuqa.data.repository.ChatRepositoryExample
+import com.example.feishuqa.data.repository.ChatRepository
 import com.example.feishuqa.data.repository.MainRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -185,7 +185,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun selectModel(model: AIModel) {
         _uiState.value = _uiState.value.copy(selectedModel = model)
         // 同步更新 ChatRepositoryExample 中的模型
-        ChatRepositoryExample.getInstance(appContext).setCurrentModel(model)
+        ChatRepository.getInstance(appContext).setCurrentModel(model)
     }
 
     /**

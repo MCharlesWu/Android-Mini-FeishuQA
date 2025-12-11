@@ -74,12 +74,10 @@ class ChatInputView @JvmOverloads constructor(
 
     init {
         orientation = VERTICAL
-        // Binding.inflate 已经完成了视图加载和绑定，此处不再需要 inflate 和 findViewById
         setupListeners()
     }
 
     fun updateModelName(name: String) {
-        // 使用 binding 访问，不再需要 findViewById
         binding.tvSelectedModel.text = name
     }
 
@@ -185,7 +183,7 @@ class ChatInputView @JvmOverloads constructor(
         setupVoiceTouchListener()
     }
 
-    // ★★★ 新增：显示全屏图片预览
+    // 显示全屏图片预览
     private fun showImagePreviewDialog(uri: Any) {
         if (imagePreviewDialog == null) {
             imagePreviewDialog = Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
@@ -200,7 +198,7 @@ class ChatInputView @JvmOverloads constructor(
         Glide.with(context)
             .load(uri)
             .fitCenter()
-            .into(dialogBinding.ivFullImage) // 假设 layout xml 中 id 为 ivFullImage
+            .into(dialogBinding.ivFullImage)
 
         // 点击大图关闭预览
         dialogBinding.ivFullImage.setOnClickListener {
@@ -212,7 +210,7 @@ class ChatInputView @JvmOverloads constructor(
         }
     }
 
-    // ★★★ 新增：安全关闭图片预览
+    // 安全关闭图片预览
     private fun dismissImagePreviewDialog() {
         if (imagePreviewDialog?.isShowing == true && (context as? android.app.Activity)?.isFinishing == false) {
             try { imagePreviewDialog?.dismiss() } catch (_: Exception) {}
@@ -254,7 +252,7 @@ class ChatInputView @JvmOverloads constructor(
         imm?.showSoftInput(binding.etInput, InputMethodManager.SHOW_IMPLICIT)
     }
 
-    // 处理图片预览 (小图)
+    // 处理图片预览
     private fun handleImagePreview(uri: Any?) {
         if (uri != null) {
             binding.layoutPreview.visibility = View.VISIBLE
@@ -394,7 +392,6 @@ class ChatInputView @JvmOverloads constructor(
             }
         }
 
-        // 使用 Binding 加载 Dialog 视图
         if (voiceBinding == null) {
             voiceBinding = DialogFeishuVoiceBinding.inflate(LayoutInflater.from(context))
             voiceDialog?.setContentView(voiceBinding!!.root)

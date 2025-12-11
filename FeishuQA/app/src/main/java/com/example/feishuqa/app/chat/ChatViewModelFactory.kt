@@ -4,11 +4,11 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.feishuqa.app.keyboard.ChatInputViewModel
-import com.example.feishuqa.data.repository.ChatRepositoryExample
+import com.example.feishuqa.data.repository.ChatRepository
 
 // --- 通用工厂类 (用于注入 Repository) ---
 class ChatViewModelFactory(
-    private val repository: ChatRepositoryExample,
+    private val repository: ChatRepository,
     private val application: Application? = null
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

@@ -1,11 +1,11 @@
 package com.example.feishuqa.app.chat
 
 import androidx.lifecycle.ViewModel
-import com.example.feishuqa.data.repository.ChatRepositoryExample
+import com.example.feishuqa.data.repository.ChatRepository
 
 // --- ViewModel 1: 负责显示 ---
 // --- Display ViewModel ---
-class ChatDisplayViewModel(private val repository: ChatRepositoryExample) : ViewModel() {
+class ChatDisplayViewModel(private val repository: ChatRepository) : ViewModel() {
     // 直接观察仓库
     val messages = repository.messages
     
