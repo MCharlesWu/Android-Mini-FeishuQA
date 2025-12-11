@@ -15,6 +15,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
+import com.example.feishuqa.data.entity.ChatResponse
+import com.example.feishuqa.data.entity.AiMessage
+import com.example.feishuqa.data.entity.ChatRequest
 
 object AiHelper {
     private const val TAG = "AiHelper"
@@ -117,7 +120,7 @@ object AiHelper {
             // 构建请求数据
             val requestModel = ChatRequest(
                 model = config.modelName,
-                messages = listOf(Message(role = "user", content = question))
+                messages = listOf(AiMessage(role = "user", content = question))
             )
 
             val jsonBody = gson.toJson(requestModel)
@@ -154,37 +157,3 @@ object AiHelper {
         }
     }
 }
-
-// AI回复响应对象
-data class ChatResponse
-(
-    val id: String?,
-    val model: String?,
-    val choices: List<Choice>?
-)
-
-// 对应 choices 数组里的每一项
-data class Choice
-(
-    val index: Int?,
-    // 对应 JSON 中的 "message": {...}
-    val message: Message?,
-
-    // 常用字段，代表为什么停止生成 (如 "stop" 代表正常结束)
-    @SerializedName("finish_reason")
-    val finishReason: String?
-)
-
-data class Message
-(
-    val role: String,   // "user" 或 "assistant"
-    val content: String // 对话的具体内容
-)
-
-// 调用API的请求类
-data class ChatRequest
-(
-    val model: String = "deepseek-chat",
-    val messages: List<Message>,
-    val stream: Boolean = false
-)
