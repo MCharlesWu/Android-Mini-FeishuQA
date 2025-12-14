@@ -617,9 +617,9 @@ Closes #123
 
 ## 📧 联系方式
 
-- **项目地址**：[https://github.com/your-username/FeishuQA](https://github.com/your-username/FeishuQA)
-- **问题反馈**：[Issues](https://github.com/your-username/FeishuQA/issues)
-- **邮箱**：your-email@example.com
+- **项目地址**：[https://github.com/MCharlesWu/Android-Mini-FeishuQA](https://github.com/MCharlesWu/Android-Mini-FeishuQA)
+- **问题反馈**：[Issues](https://github.com/MCharlesWu/Android-Mini-FeishuQA/issues)
+- **邮箱**：charliewu1214@foxmail.com
 
 ---
 
@@ -627,6 +627,6 @@ Closes #123
 
 **如果这个项目对你有帮助，请给它一个 ⭐ Star！**
 
-Made with ❤️ by [Your Name]
+Made with ❤️ by Chenglin
 
 </div>
